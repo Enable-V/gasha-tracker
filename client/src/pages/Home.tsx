@@ -92,7 +92,7 @@ const Home = () => {
         <h2 className="text-2xl font-bold text-white mb-4">Команда для получения ссылки</h2>
         <div className="bg-black/40 rounded-lg p-4 font-mono text-sm overflow-x-auto">
           <code className="text-green-400">
-            Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://gist.githubusercontent.com/MadeBaruna/e017637fbc6c72d47d72ba42dfb2477b/raw/hsr_getlink.ps1'))}"
+            {`Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://gist.githubusercontent.com/MadeBaruna/e017637fbc6c72d47d72ba42dfb2477b/raw/hsr_getlink.ps1'))}"`}
           </code>
         </div>
         <p className="text-gray-400 text-sm mt-2">

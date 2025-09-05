@@ -16,11 +16,11 @@ Full-stack Node.js application for tracking Honkai Star Rail gacha pulls with mo
 - [x] Project Requirements Clarified
 - [x] Project Scaffolded
 - [x] Project Customized
-- [ ] Extensions Installed
-- [ ] Project Compiled
-- [ ] Tasks Created
-- [ ] Project Launched
-- [ ] Documentation Complete
+- [x] Extensions Installed
+- [x] Project Compiled
+- [x] Tasks Created
+- [x] Project Launched
+- [x] Documentation Complete
 
 ## Created Files
 - Main project structure with client/server separation

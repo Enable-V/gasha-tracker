@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Upload from './pages/Upload'
 import Statistics from './pages/Statistics'
 import UserProfile from './pages/UserProfile'
+import TestPage from './pages/TestPage'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/upload" element={<Upload />} />
         <Route path="/statistics" element={<Statistics />} />
         <Route path="/user/:uid" element={<UserProfile />} />
+        <Route path="/test" element={<TestPage />} />
       </Routes>
     </Layout>
   )

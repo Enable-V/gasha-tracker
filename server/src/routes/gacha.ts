@@ -9,18 +9,25 @@ router.get('/user/:uid', async (req: Request, res: Response) => {
     const { uid } = req.params;
     const { banner, limit = 50, offset = 0 } = req.query;
     
+    req.logger.info(`Fetching gacha pulls for UID: ${uid}`);
+    
     const user = await req.prisma.user.findUnique({
       where: { uid }
     });
     
     if (!user) {
+      req.logger.error(`User not found: ${uid}`);
       return res.status(404).json({ error: 'User not found' });
     }
+    
+    req.logger.info(`Found user: ${user.id} (${user.username})`);
     
     const whereClause: any = { userId: user.id };
     if (banner) {
       whereClause.bannerId = banner;
     }
+    
+    req.logger.info(`Searching with where clause:`, whereClause);
     
     const pulls = await req.prisma.gachaPull.findMany({
       where: whereClause,
@@ -34,9 +41,13 @@ router.get('/user/:uid', async (req: Request, res: Response) => {
       skip: Number(offset)
     });
     
+    req.logger.info(`Found ${pulls.length} pulls`);
+    
     const total = await req.prisma.gachaPull.count({
       where: whereClause
     });
+    
+    req.logger.info(`Total pulls count: ${total}`);
     
     res.json({
       pulls,

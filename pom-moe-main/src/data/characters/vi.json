@@ -1,0 +1,402 @@
+{
+  "march-7th": {
+    "id": "march-7th",
+    "name": "March 7th",
+    "path": "preservation",
+    "element": "ice",
+    "rarity": 4,
+    "background": "Một thiếu nữ ngủ sâu trong tảng băng vĩnh hằng và không biết gì về quá khứ.\\nĐể tìm kiếm sự thật về thân thế, cô đã chọn cùng đồng hành với Đội Tàu Astral.\\nHiện giờ đã chuẩn bị cho mình khoảng <unbreak>67</unbreak> \"câu chuyện cuộc đời\"."
+  },
+  "dan-heng": {
+    "id": "dan-heng",
+    "name": "Dan Heng",
+    "path": "the-hunt",
+    "element": "wind",
+    "rarity": 4,
+    "background": "Một thanh niên lạnh lùng ít nói, giữ kín như bưng về quá khứ của mình.\\nAnh đã chọn đi cùng Đội Tàu Astral để trốn tránh dòng tộc của mình."
+  },
+  "himeko": {
+    "id": "himeko",
+    "name": "Himeko",
+    "path": "erudition",
+    "element": "fire",
+    "rarity": 5,
+    "background": "Người sửa chữa Đội Tàu Astral.\\nĐể nhìn thấy tận mắt vũ trụ bao la, cô đã chọn đi cùng Đội Tàu.\\nSở thích của cô là tự tay pha cà phê."
+  },
+  "welt": {
+    "id": "welt",
+    "name": "Welt",
+    "path": "nihility",
+    "element": "imaginary",
+    "rarity": 5,
+    "background": "Tiền bối dày dạn kinh nghiệm của Đội Tàu Astral.\\nSự nhiệt huyết tận sâu trong đáy lòng lại một lần nữa được thổi bùng để tận hưởng cuộc phiêu lưu đã từ lâu chưa dấn thân.\\nThỉnh thoảng sẽ vẽ lại hành trình phiêu lưu của mình vào một quyển sổ."
+  },
+  "kafka": {
+    "id": "kafka",
+    "name": "Kafka",
+    "path": "nihility",
+    "element": "lightning",
+    "rarity": 5,
+    "background": "Thành viên của \"Thợ Săn Stellaron\", mang vẻ đẹp của sự phóng khoáng, điềm đạm và chuyên nghiệp.\\nSử dụng Bùa Mê Ngôn Từ để khiến {NICKNAME hấp thụ Stellaron.\\nSở thích là mua và sắp xếp áo khoác."
+  },
+  "silver-wolf": {
+    "id": "silver-wolf",
+    "name": "Sói Bạc",
+    "path": "nihility",
+    "element": "quantum",
+    "rarity": 5,
+    "background": "Thành viên của \"Thợ Săn Stellaron\", một bậc thầy hacker.\\nXem vũ trụ là một trò chơi mô phỏng nhập vai tầm cỡ và vui chơi trong đó.\\nNắm giữ \"Trình Chỉnh Sửa Aether\" có thể sửa đổi dữ liệu hiện thực."
+  },
+  "arlan": {
+    "id": "arlan",
+    "name": "Arlan",
+    "path": "destruction",
+    "element": "lightning",
+    "rarity": 4,
+    "background": "Người phụ trách bộ phận an ninh của Trạm Không Gian Herta.\\nKhông giỏi ăn nói, hy vọng bảo vệ được những người đam mê nghiên cứu, để họ hoàn thành việc nghiên cứu một cách thuận lợi."
+  },
+  "asta": {
+    "id": "asta",
+    "name": "Asta",
+    "path": "harmony",
+    "element": "fire",
+    "rarity": 4,
+    "background": "Trạm trưởng của Trạm Không Gian Herta, tiểu thư con nhà danh giá.\\nNhà nghiên cứu thiên văn ham học hỏi, rất giỏi trong việc quản lý các nhân viên với nhiều tính cách khác nhau ở Trạm Không Gian."
+  },
+  "herta": {
+    "id": "herta",
+    "name": "Herta",
+    "path": "erudition",
+    "element": "ice",
+    "rarity": 4,
+    "background": "Thành viên số <unbreak>83</unbreak> của Câu Lạc Bộ Thiên Tài, chủ nhân thật sự của Trạm Không Gian.\\nMột nhà khoa học cực kỳ thông minh nhưng không có lòng đồng cảm."
+  },
+  "bronya": {
+    "id": "bronya",
+    "name": "Bronya",
+    "path": "harmony",
+    "element": "wind",
+    "rarity": 5,
+    "background": "Người kế thừa của Đấng Bảo Vệ Tối Cao Belobog.\\nVừa có khí chất kiêu ngạo của công chúa vừa có tính kiên trung của một quân nhân."
+  },
+  "seele": {
+    "id": "seele",
+    "name": "Seele",
+    "path": "the-hunt",
+    "element": "quantum",
+    "rarity": 5,
+    "background": "Trụ cột của tổ chức kháng chiến dưới lòng đất \"Lửa Ngầm\", biệt hiệu là \"Bươm Bướm\".\\nTính tình thẳng thắn bộc trực, nhưng sâu trong tim lại là một người vô cùng tinh tế nhạy cảm."
+  },
+  "serval": {
+    "id": "serval",
+    "name": "Serval",
+    "path": "erudition",
+    "element": "lightning",
+    "rarity": 4,
+    "background": "Thợ cơ khí Belobog, đã từng là chuyên viên nghiên cứu ở bộ phận kỹ thuật Đấng Kiến Tạo.\\nLà chị của Gepard Landau nhưng tính cách lại khác hoàn toàn với em mình.\\nYêu thích nghệ thuật âm nhạc cổ xưa có tên là rock 'n' roll từ trước khi băng giá vĩnh cửu ập đến."
+  },
+  "gepard": {
+    "id": "gepard",
+    "name": "Gepard",
+    "path": "preservation",
+    "element": "ice",
+    "rarity": 5,
+    "background": "Đội trưởng Thiết Vệ Bờm Bạc, chiến sĩ hạng nhất nhì ở Belobog.\\nTư tưởng và hành động nhất quán, tỉ mỉ cẩn thận, chưa từng buông thả."
+  },
+  "natasha": {
+    "id": "natasha",
+    "name": "Natasha",
+    "path": "abundance",
+    "element": "physical",
+    "rarity": 4,
+    "background": "Bác sĩ của Thành Phố Ngầm ở Belobog, cũng là người chăm sóc bọn trẻ.\\nLà người dịu dàng gần gũi nhưng cũng ẩn chứa một mặt nguy hiểm."
+  },
+  "pela": {
+    "id": "pela",
+    "name": "Pela",
+    "path": "nihility",
+    "element": "ice",
+    "rarity": 4,
+    "background": "Sĩ quan tình báo Thiết Vệ Bờm Bạc.\\nChăm chỉ, được các thành viên của đội thiết vệ vô cùng kính trọng."
+  },
+  "clara": {
+    "id": "clara",
+    "name": "Clara",
+    "path": "destruction",
+    "element": "physical",
+    "rarity": 5,
+    "background": "Thiếu nữ lang thang sống cùng robot.\\nHướng nội, dịu dàng, có một trái tim thuần khiết.\\nCô có một khát khao là mọi người ở Thành Phố Ngầm đều trở thành \"người nhà\" của nhau."
+  },
+  "sampo": {
+    "id": "sampo",
+    "name": "Sampo",
+    "path": "nihility",
+    "element": "wind",
+    "rarity": 4,
+    "background": "Con buôn đi lại giữa tầng trên và dưới mặt đất.\\nAnh ấy hành động như thể là bạn của tất cả mọi người, nhiệt tình hài hước, rất giỏi pha trò."
+  },
+  "hook": {
+    "id": "hook",
+    "name": "Hook",
+    "path": "destruction",
+    "element": "fire",
+    "rarity": 4,
+    "background": "Sếp của đội thám hiểm \"Băng Chuột Chũi\" dưới lòng đất (tự phong).\\nYêu tự do, xem cuộc sống là cuộc phiêu lưu dài tập."
+  },
+  "lynx": {
+    "id": "lynx",
+    "name": "Lynx",
+    "path": "abundance",
+    "element": "quantum",
+    "rarity": 4,
+    "background": "Nhà thám hiểm Cánh Đồng Tuyết của Belobog, cô em út của nhà Landau. \\nLà người điềm tĩnh, kiên định trong hành động. Thường đến Cánh Đồng Tuyết thám hiểm một mình."
+  },
+  "luka": {
+    "id": "luka",
+    "name": "Luka",
+    "path": "nihility",
+    "element": "physical",
+    "rarity": 4,
+    "background": "Võ Sĩ Quyền Anh quán quân khu tầng dưới của Belobog, là một trong những thành viên đắc lực của Lửa Ngầm.\\nQuán quân liên tục của Câu Lạc Bộ Đấu Quyền, dùng sự nhiệt huyết của bản thân để khích lệ những đứa trẻ khu tầng dưới thực hiện khát vọng của riêng mình."
+  },
+  "topaz-numby": {
+    "id": "topaz-numby",
+    "name": "Topaz & Numby",
+    "path": "the-hunt",
+    "element": "fire",
+    "rarity": 5,
+    "background": "Topaz, cán bộ cao cấp của Bộ Đầu Tư Chiến Lược thuộc Công Ty Hành Tinh Hòa Bình, lãnh đạo nhóm theo dõi khoản nợ đặc biệt.\\nTuổi còn trẻ mà đã trở thành một trong \"<unbreak>10</unbreak> người có trái tim đá\", với nền tảng là \"giục trả nợ\".\\nCộng sự Heo Đất Không Gian \"Numby\" lại có thể cảm nhận nhạy bén về sự tồn tại của \"của cải\", ngay cả những việc liên quan đến an ninh, đòi nợ, thống kê v.v... cũng không thành vấn đề.\\nNgày nay họ đang cùng nhau tuần tra ngân hà, theo đuổi các vấn đề tranh chấp nợ nần gây ảnh hưởng đến sự phát triển của công ty."
+  },
+  "qingque": {
+    "id": "qingque",
+    "name": "Qingque",
+    "path": "erudition",
+    "element": "quantum",
+    "rarity": 4,
+    "background": "Nhà chiêm tinh của Sở Thiên Tượng Xianzhou Luofu, kiêm quản lý kho sách.\\nDo trốn việc lười biếng nên sắp bị giáng chức thành người giữ cửa."
+  },
+  "tingyun": {
+    "id": "tingyun",
+    "name": "Tingyun",
+    "path": "harmony",
+    "element": "lightning",
+    "rarity": 4,
+    "background": "Tiếp Độ Sứ của Sở Thiên Bách Xianzhou Luofu.\\nCùng thương đội đi khắp thế giới, liên kết mậu dịch và đồng minh."
+  },
+  "luocha": {
+    "id": "luocha",
+    "name": "Luocha",
+    "path": "abundance",
+    "element": "imaginary",
+    "rarity": 5,
+    "background": "Lúc nào cũng mang bên mình một chiếc quan tài, là một thương nhân đến từ một nơi xa xôi bên ngoài biển lớn.\\nY thuật cao siêu."
+  },
+  "jing-yuan": {
+    "id": "jing-yuan",
+    "name": "Jing Yuan",
+    "path": "erudition",
+    "element": "lightning",
+    "rarity": 5,
+    "background": "Một trong Thất Thiên Tướng Đế Cung Liên Minh Xianzhou, \"Thần Sách Tướng Quân\" phụ trách chỉ huy Vân Kỵ Quân Luofu.\\nSư phụ là kiếm thủ hàng đầu tiền nhiệm của \"Luofu\", nhưng lại không được biết đến với tài năng võ thuật."
+  },
+  "blade": {
+    "id": "blade",
+    "name": "Blade",
+    "path": "destruction",
+    "element": "wind",
+    "rarity": 5,
+    "background": "Thành viên của Thợ Săn Stellaron, một kiếm khách từ bỏ thân mình, trở thành lưỡi kiếm sắc nhọn.\\nTrung thành với \"Nô Lệ Của Số Phận\", sở hữu năng lực tự chữa lành đáng sợ."
+  },
+  "sushang": {
+    "id": "sushang",
+    "name": "Sushang",
+    "path": "the-hunt",
+    "element": "physical",
+    "rarity": 4,
+    "background": "Người lính trẻ sinh ra ở Xianzhou Yaoqing, đi đến Vân Kỵ Quân Luofu để huấn luyện.\\nMang theo thanh kiếm gia truyền được mẹ tặng, hướng về tương lai mà bản thân sẽ viết nên."
+  },
+  "yukong": {
+    "id": "yukong",
+    "name": "Yukong",
+    "path": "harmony",
+    "element": "imaginary",
+    "rarity": 4,
+    "background": "Đứng đầu Sở Thiên Bách Xianzhou Luofu, phi công và xạ thủ nhiều năm chinh chiến.\\nNhưng nay lại vướng bận công vụ, khó thoát ra khỏi."
+  },
+  "fu-xuan": {
+    "id": "fu-xuan",
+    "name": "Fu Xuan",
+    "path": "preservation",
+    "element": "quantum",
+    "rarity": 5,
+    "background": "Thủ lĩnh Sở Thiên Tượng Xianzhou Luofu.\\nDựa vào con mắt thứ ba và Ma Trận Tiên Tri để tiên đoán đường đi của Xianzhou, đoán trước tốt xấu của sự việc."
+  },
+  "yanqing": {
+    "id": "yanqing",
+    "name": "Yanqing",
+    "path": "the-hunt",
+    "element": "ice",
+    "rarity": 5,
+    "background": "Thị vệ của tướng quân Jing Yuan, tuy còn trẻ tuổi nhưng đã là một kiếm sĩ tài năng.\\nTay lăm lăm thanh kiếm, bất khả chiến bại."
+  },
+  "guinaifen": {
+    "id": "guinaifen",
+    "name": "Guinaifen",
+    "path": "nihility",
+    "element": "fire",
+    "rarity": 4,
+    "background": "Nghệ sĩ tạm trú ở Xianzhou Luofu, hoặc có thể nói là, nghệ nhân đường phố.\\nSau khi cơm no ba bữa, sẽ theo đuổi cuộc sống mới của mình ở Luofu."
+  },
+  "bailu": {
+    "id": "bailu",
+    "name": "Bailu",
+    "path": "abundance",
+    "element": "lightning",
+    "rarity": 5,
+    "background": "Tôn trưởng của tộc Vidyadhara ở Xianzhou Luofu, là thầy thuốc có biệt danh \"Long Nữ Trị Liệu\".\\nCứu kẻ sắp chết, giúp người bị thương bằng \"cách chữa trị\" mà chỉ có y thuật độc môn và long mạch mới có thể làm được."
+  },
+  "jingliu": {
+    "id": "jingliu",
+    "name": "Jingliu",
+    "path": "destruction",
+    "element": "ice",
+    "rarity": 5,
+    "background": "Từng là kiếm thủ hàng đầu của Luofu, người sáng lập Vân Kỵ Quân nổi tiếng bất bại.\\nNhưng nay tên của cô đã bị xóa nhòa, trở thành phản đồ của Xianzhou đang đi trên ranh giới giữa sự tỉnh táo và Xác Nhập Ma."
+  },
+  "dan-heng-imbibitor-lunae": {
+    "id": "dan-heng-imbibitor-lunae",
+    "name": "Dan Heng - Ẩm Nguyệt",
+    "path": "destruction",
+    "element": "imaginary",
+    "rarity": 5,
+    "background": "Nguyên trạng thật sự của Dan Heng tộc Vidyadhara, mang trên người sức mạnh Ẩm Nguyệt Quân để lại.\\nKhi tiếp nhận chiếc sừng uy nghiêm trên đỉnh trán, anh ấy phải tiếp nhận tất cả công và tội một đời của tội nhân này."
+  },
+  "xueyi": {
+    "id": "xueyi",
+    "name": "Xueyi",
+    "path": "destruction",
+    "element": "quantum",
+    "rarity": 4,
+    "background": "Phán quan của \"Sở Thập Vương\", cơ quan giám sát sinh tử ở Xianzhou Luofu.\\nVốn đã mất từ nhiều năm, mượn cơ thể con rối để \"hoàn dương\" và thực hiện sứ mệnh."
+  },
+  "hanya": {
+    "id": "hanya",
+    "name": "Hanya",
+    "path": "harmony",
+    "element": "physical",
+    "rarity": 4,
+    "background": "Một trong những Phán Quan của Sở Thập Vương Xianzhou Luofu.\\nNhận lệnh Thập Vương, chấp chưởng Thiên Bút Tiên Tri, đọc danh sách tội nghiệt và truyền đạt kết quả phán tội."
+  },
+  "huohuo": {
+    "id": "huohuo",
+    "name": "Huohuo",
+    "path": "abundance",
+    "element": "wind",
+    "rarity": 5,
+    "background": "Phán Quan thực tập của Sở Thập Vương Xianzhou Luofu, bé gái Người Hồ Ly bị Tuế Dương nhập.\\nTính cách nhút nhát, yếu đuối, sợ hãi trước những sự việc quái dị, nhưng lại gánh trọng trách dụ dỗ và trấn áp tà ma."
+  },
+  "gallagher": {
+    "id": "gallagher",
+    "name": "Gallagher",
+    "path": "abundance",
+    "element": "fire",
+    "rarity": 4,
+    "background": "Cảnh Sát Trưởng của Gia Tộc Bloodhound Penacony, tiếp đãi những vị khách đến thăm rất chu đáo, nhưng luôn có sự đề phòng. Dường như có rất nhiều chuyện đã xảy ra trong quá khứ nhưng lại chưa bao giờ chủ động nhắc đến."
+  },
+  "argenti": {
+    "id": "argenti",
+    "name": "Argenti",
+    "path": "erudition",
+    "element": "physical",
+    "rarity": 5,
+    "background": "Kỵ sĩ cổ điển của Đội Kỵ Sĩ Đẹp Thuần Khiết, thành kính tín ngưỡng Aeon \"Đẹp Thuần Khiết\" Idrila đã mất tích.\\nNgay thẳng chính trực, chu du khắp vũ trụ, ca ngợi vẻ đẹp của Idrila."
+  },
+  "ruan-mei": {
+    "id": "ruan-mei",
+    "name": "Ruan Mei",
+    "path": "harmony",
+    "element": "ice",
+    "rarity": 5,
+    "background": "Hội viên Câu Lạc Bộ Thiên Tài, chuyên gia trong lĩnh vực khoa học sinh mệnh, cùng hợp tác với nhóm người Herta phát triển Vũ Trụ Mô Phỏng."
+  },
+  "aventurine": {
+    "id": "aventurine",
+    "name": "Aventurine",
+    "path": "preservation",
+    "element": "imaginary",
+    "rarity": 5,
+    "background": "Thành viên cấp cao \"Bộ Phận Đầu Tư Chiến Lược\" của Công Ty Hành Tinh Hòa Bình.\\nLà một người yêu thích mạo hiểm, luôn nở nụ cười nhưng rất khó đoán được nội tâm đang nghĩ gì."
+  },
+  "dr-ratio": {
+    "id": "dr-ratio",
+    "name": "Dr. Ratio",
+    "path": "the-hunt",
+    "element": "imaginary",
+    "rarity": 5,
+    "background": "Học Giả Hội Trí Thức.\\nTính tình kỳ quặc, lời lẽ khắt khe nhưng không kém phần phong độ.\\nẨn chứa bên dưới cái đầu thạch cao kỳ quái đó là một dung mạo đẹp lạ thường."
+  },
+  "sparkle": {
+    "id": "sparkle",
+    "name": "Sparkle",
+    "path": "harmony",
+    "element": "quantum",
+    "rarity": 5,
+    "background": "Một trong các thành viên của \"Kẻ Ngốc Đeo Mặt Nạ\", khó đoán, bất chấp thủ đoạn.\\nMột bậc thầy sân khấu nguy hiểm, nghiện diễn xuất, lúc nào cũng đeo cả ngàn chiếc mặt nạ, có thể hóa thân thành hàng vạn diện mạo khác nhau.\\nCủa cải, địa vị, quyền lợi... đối với Sparkle đều không quan trọng. Điều duy nhất khiến cô hành động, chỉ có mỗi \"niềm vui\"."
+  },
+  "black-swan": {
+    "id": "black-swan",
+    "name": "Black Swan",
+    "path": "nihility",
+    "element": "wind",
+    "rarity": 5,
+    "background": "Người Lưu Giữ Ký Ức của Sảnh Đường Hồi Ức, nhà chiêm tinh bí ẩn thong dong.\\nHãy kiên nhẫn lắng nghe \"ký ức\" của người khác, sẽ có thể nắm giữ vận mệnh trong tay."
+  },
+  "acheron": {
+    "id": "acheron",
+    "name": "Acheron",
+    "path": "nihility",
+    "element": "lightning",
+    "rarity": 5,
+    "background": "Lữ khách tự xưng là \"Cảnh Binh Thiên Hà\", tên thật không rõ.\\nĐeo thanh đao dài trên người, độc hành trong ngân hà."
+  },
+  "robin": {
+    "id": "robin",
+    "name": "Robin",
+    "path": "harmony",
+    "element": "physical",
+    "rarity": 5,
+    "background": "Sinh ra ở Penacony, ca sĩ Tộc Halovian nổi tiếng vũ trụ, cô gái có phong thái trầm tĩnh và thanh lịch.\\nLần này được Gia Tộc mời về cố hương, để hát tặng cho mọi người trong \"Đại Nhạc Hội Hòa Hợp\".\\nCó thể dựa vào sức mạnh của \"Hòa Hợp\" để truyền tải giọng hát, thể hiện \"cộng hưởng\" giữa người hâm mộ và cả sinh linh vạn giới."
+  },
+  "firefly": {
+    "id": "firefly",
+    "name": "Firefly",
+    "path": "destruction",
+    "element": "fire",
+    "rarity": 5,
+    "background": "Thành viên Thợ Săn Stellaron, mặc Chiến Giáp SAM khi chiến đấu. Trung thành với nhiệm vụ, kiên cường khó lay chuyển.\\nSinh ra làm vũ khí để đánh bại Đàn Côn Trùng, tốc độ trưởng thành khác người, nhưng tuổi thọ rất ngắn.\\nĐể tìm cơ hội \"sống\", đã gia nhập Thợ Săn Stellaron, tìm cách chống lại vận mệnh."
+  },
+  "misha": {
+    "id": "misha",
+    "name": "Misha",
+    "path": "destruction",
+    "element": "ice",
+    "rarity": 4,
+    "background": "Đứa trẻ gác cửa ở Khách Sạn Penacony, một cậu bé ngoan ngoãn hiểu chuyện.\\nÔm khát vọng dõi theo dấu chân Khách Vô Danh, mơ ước một ngày bản thân cũng có thể bước lên cuộc hành trình."
+  },
+  "boothill": {
+    "id": "boothill",
+    "name": "Boothill",
+    "path": "the-hunt",
+    "element": "physical",
+    "rarity": 5,
+    "background": "Anh chàng cao bồi \"người cải tạo\" lang thang trong vũ trụ, cực kỳ lạc quan, không bị ràng buộc.\\nLà một thành viên của \"Cảnh Binh Thiên Hà\", có thể làm bất cứ điều gì để trừ gian diệt ác...\\nNhững hành động phách lối của anh ta đều nhằm mục đích thu hút sự chú ý của Công Ty Hành Tinh Hòa Bình - mục tiêu trả thù của anh ta."
+  },
+  "trailblazer": {
+    "id": "trailblazer",
+    "name": "Nhà Khai Phá",
+    "path": "adaptive",
+    "element": "adaptive",
+    "rarity": 5,
+    "background": "Thiếu nữ/Thiếu niên lên Đội Tàu Astral.\\nĐể diệt trừ hiểm họa mà Stellaron mang đến, đã quyết định đồng hành cùng đội tàu."
+  }
+}

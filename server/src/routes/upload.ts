@@ -60,6 +60,8 @@ router.post('/url/:uid', async (req: Request, res: Response) => {
     const { uid } = req.params;
     const { url } = req.body;
     
+    req.logger.info(`Starting gacha import for UID: ${uid}`);
+    
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
@@ -69,25 +71,45 @@ router.post('/url/:uid', async (req: Request, res: Response) => {
     });
     
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      // Создаем пользователя если не существует
+      const newUser = await req.prisma.user.create({
+        data: {
+          uid,
+          username: `Player_${uid}`
+        }
+      });
+      req.logger.info(`Created new user: ${uid}`);
     }
     
     // Extract authkey from URL
     const authkey = extractAuthkey(url);
     if (!authkey) {
-      return res.status(400).json({ error: 'Invalid HSR URL format' });
+      req.logger.error(`Invalid URL format for UID: ${uid}`);
+      return res.status(400).json({ error: 'Invalid HSR URL format. Please make sure you copied the complete URL.' });
     }
     
+    req.logger.info(`Extracted authkey for UID: ${uid}`);
+    
     // Fetch gacha data from HSR API
-    const gachaData = await fetchGachaDataFromAPI(authkey);
+    const gachaData = await fetchGachaDataFromAPI(authkey, url);
+    req.logger.info(`Fetched ${gachaData.length} gacha records for UID: ${uid}`);
+    
+    if (gachaData.length === 0) {
+      return res.status(400).json({ error: 'No gacha data found. Please make sure you have gacha history in the game.' });
+    }
     
     // Process gacha data
-    const result = await processGachaData(req.prisma, user.id, gachaData);
+    const result = await processGachaData(req.prisma, user?.id || (await req.prisma.user.findUnique({ where: { uid } }))!.id, gachaData);
+    
+    req.logger.info(`Import completed for UID: ${uid}. Imported: ${result.imported}, Skipped: ${result.skipped}`);
     
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     req.logger.error('Error fetching gacha data from URL:', error);
-    res.status(500).json({ error: 'Failed to fetch gacha data from URL' });
+    res.status(500).json({ 
+      error: 'Failed to fetch gacha data from URL',
+      details: error.message
+    });
   }
 });
 
@@ -101,49 +123,116 @@ function extractAuthkey(url: string): string | null {
   }
 }
 
+// Helper function to get base URL from the provided URL
+function getBaseURL(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
+  } catch {
+    return 'https://api-os-takumi.mihoyo.com/common/gacha_record/api/getGachaLog';
+  }
+}
+
 // Helper function to fetch gacha data from HSR API
-async function fetchGachaDataFromAPI(authkey: string): Promise<any[]> {
+async function fetchGachaDataFromAPI(authkey: string, originalUrl: string): Promise<any[]> {
   const axios = await import('axios');
   const allPulls: any[] = [];
   
-  // HSR gacha types
-  const gachaTypes = ['1', '2', '11', '12']; // Character, Weapon, Standard, Beginner
+  // HSR gacha types - правильные значения от pom-moe
+  const gachaTypes = [
+    { id: '1', name: 'Stellar Warp (Standard)', type: 'standard' },
+    { id: '2', name: 'Departure Warp (Beginner)', type: 'beginner' }, 
+    { id: '11', name: 'Character Event Warp', type: 'character' },
+    { id: '12', name: 'Light Cone Event Warp', type: 'lightcone' }
+  ];
+  
+  const baseURL = getBaseURL(originalUrl);
   
   for (const gachaType of gachaTypes) {
     let page = 1;
+    let endId = '0';
     let hasMore = true;
     
     while (hasMore) {
-      const response = await axios.default.get('https://sg-public-api.hoyoverse.com/event/gacha_info/api/getGachaLog', {
-        params: {
-          authkey,
-          gacha_type: gachaType,
-          page,
-          size: 20,
-          lang: 'en'
-        },
-        timeout: 10000
-      });
-      
-      const data = response.data;
-      
-      if (data.retcode !== 0) {
-        throw new Error(`API Error: ${data.message}`);
-      }
-      
-      const pulls = data.data.list;
-      
-      if (pulls.length === 0) {
-        hasMore = false;
-      } else {
-        allPulls.push(...pulls.map((pull: any) => ({
-          ...pull,
-          gacha_type: gachaType
-        })));
-        page++;
+      try {
+        // Создаем новый URL на основе оригинального, меняя только нужные параметры
+        const requestUrl = new URL(originalUrl);
+        requestUrl.searchParams.set('gacha_type', gachaType.id);
+        requestUrl.searchParams.set('page', page.toString());
+        requestUrl.searchParams.set('size', '20');
+        requestUrl.searchParams.set('end_id', endId);
+        requestUrl.searchParams.set('lang', 'en');
+
+        console.log(`Making request to banner ${gachaType.id} (${gachaType.name}), page ${page}, end_id: ${endId}`);
         
-        // Add delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 200));
+        const response = await axios.default.get(requestUrl.toString(), {
+          timeout: 15000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://webstatic-sea.mihoyo.com/',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-site'
+          }
+        });
+        
+        console.log(`Response received for banner ${gachaType.id}, status: ${response.status}`);
+        
+        const data = response.data;
+        
+        console.log(`API response: retcode=${data.retcode}, message="${data.message || 'OK'}"`);
+        
+        if (data.retcode !== 0) {
+          if (data.retcode === -101) {
+            throw new Error('Invalid authkey or authkey expired');
+          }
+          throw new Error(`API Error ${data.retcode}: ${data.message}`);
+        }
+        
+        const pulls = data.data?.list || [];
+        console.log(`Received ${pulls.length} pulls for banner ${gachaType.id}`);
+        
+        if (pulls.length === 0) {
+          console.log(`No more pulls for banner ${gachaType.id}, moving to next banner`);
+          hasMore = false;
+        } else {
+          allPulls.push(...pulls.map((pull: any) => ({
+            ...pull,
+            gacha_type: gachaType.id,
+            banner_name: gachaType.name,
+            banner_type: gachaType.type
+          })));
+          
+          console.log(`Added ${pulls.length} pulls, total so far: ${allPulls.length}`);
+          
+          // Устанавливаем end_id для следующего запроса (последний элемент списка)
+          if (pulls.length > 0) {
+            endId = pulls[pulls.length - 1].id;
+            console.log(`Next end_id: ${endId}`);
+          }
+          
+          // Если получили меньше чем запрашивали, значит это последняя страница
+          if (pulls.length < 20) {
+            console.log(`Received less than 20 pulls (${pulls.length}), this is the last page for banner ${gachaType.id}`);
+            hasMore = false;
+          } else {
+            page++;
+          }
+          
+          // Увеличиваем задержку для избежания rate limiting
+          console.log(`Waiting 2 seconds before next request...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      } catch (error: any) {
+        console.error(`Error fetching gacha type ${gachaType.id}:`, error.message);
+        if (error.message.includes('Invalid authkey')) {
+          throw error;
+        }
+        // Продолжаем с другими типами баннеров при сетевых ошибках
+        hasMore = false;
       }
     }
   }
@@ -157,13 +246,52 @@ async function processGachaData(prisma: any, userId: number, gachaData: any[]): 
   let skippedCount = 0;
   let errorCount = 0;
   
-  for (const pull of gachaData) {
+  // Сортируем данные по времени
+  const sortedData = gachaData.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+  
+  for (const pull of sortedData) {
     try {
-      // Calculate pity count
+      // Проверяем, существует ли уже эта крутка
+      const existingPull = await prisma.gachaPull.findUnique({
+        where: { gachaId: pull.id }
+      });
+      
+      if (existingPull) {
+        skippedCount++;
+        continue;
+      }
+      
+      // Убеждаемся, что банер существует
+      const bannerId = pull.gacha_type || pull.uigf_gacha_type;
+      let banner = await prisma.banner.findUnique({
+        where: { bannerId }
+      });
+      
+      if (!banner) {
+        // Создаем банер если не существует
+        const bannerNames: Record<string, { name: string; type: string }> = {
+          '1': { name: 'Stellar Warp', type: 'standard' },
+          '2': { name: 'Character Event Warp', type: 'character' },
+          '11': { name: 'Light Cone Event Warp', type: 'weapon' },
+          '12': { name: 'Departure Warp', type: 'beginner' }
+        };
+        
+        const bannerInfo = bannerNames[bannerId] || { name: 'Unknown Banner', type: 'standard' };
+        
+        banner = await prisma.banner.create({
+          data: {
+            bannerId,
+            bannerName: bannerInfo.name,
+            bannerType: bannerInfo.type
+          }
+        });
+      }
+      
+      // Вычисляем pity count для этого банера
       const previousPulls = await prisma.gachaPull.findMany({
         where: {
           userId,
-          bannerId: pull.gacha_type || pull.uigf_gacha_type,
+          bannerId,
           time: { lt: new Date(pull.time) }
         },
         orderBy: { time: 'desc' }
@@ -175,22 +303,25 @@ async function processGachaData(prisma: any, userId: number, gachaData: any[]): 
         pityCount++;
       }
       
+      // Создаем запись крутки
       await prisma.gachaPull.create({
         data: {
           userId,
-          bannerId: pull.gacha_type || pull.uigf_gacha_type,
+          bannerId,
           gachaId: pull.id,
           itemName: pull.name,
-          itemType: pull.item_type,
+          itemType: pull.item_type || 'Unknown',
           rankType: Number(pull.rank_type),
           time: new Date(pull.time),
-          pityCount
+          pityCount,
+          isFeatured: false // Можно улучшить логику определения featured
         }
       });
       
       importedCount++;
     } catch (error: any) {
       if (error.code === 'P2002') {
+        // Duplicate key error
         skippedCount++;
       } else {
         errorCount++;
@@ -206,7 +337,8 @@ async function processGachaData(prisma: any, userId: number, gachaData: any[]): 
     message: 'Gacha data processed successfully',
     imported: importedCount,
     skipped: skippedCount,
-    errors: errorCount
+    errors: errorCount,
+    total: gachaData.length
   };
 }
 

@@ -1,0 +1,626 @@
+{
+  "arrows": {
+    "id": "arrows",
+    "name": "화살촉",
+    "path": "the-hunt",
+    "rarity": 3
+  },
+  "cornucopia": {
+    "id": "cornucopia",
+    "name": "풍작",
+    "path": "abundance",
+    "rarity": 3
+  },
+  "collapsing-sky": {
+    "id": "collapsing-sky",
+    "name": "천경",
+    "path": "destruction",
+    "rarity": 3
+  },
+  "amber": {
+    "id": "amber",
+    "name": "앰버",
+    "path": "preservation",
+    "rarity": 3
+  },
+  "void": {
+    "id": "void",
+    "name": "그윽",
+    "path": "nihility",
+    "rarity": 3
+  },
+  "chorus": {
+    "id": "chorus",
+    "name": "합창",
+    "path": "harmony",
+    "rarity": 3
+  },
+  "data-bank": {
+    "id": "data-bank",
+    "name": "아카이브",
+    "path": "erudition",
+    "rarity": 3
+  },
+  "darting-arrow": {
+    "id": "darting-arrow",
+    "name": "시위를 떠난 화살",
+    "path": "the-hunt",
+    "rarity": 3
+  },
+  "fine-fruit": {
+    "id": "fine-fruit",
+    "name": "알찬 열매",
+    "path": "abundance",
+    "rarity": 3
+  },
+  "shattered-home": {
+    "id": "shattered-home",
+    "name": "무너진 행복",
+    "path": "destruction",
+    "rarity": 3
+  },
+  "defense": {
+    "id": "defense",
+    "name": "수비",
+    "path": "preservation",
+    "rarity": 3
+  },
+  "loop": {
+    "id": "loop",
+    "name": "심연의 고리",
+    "path": "nihility",
+    "rarity": 3
+  },
+  "meshing-cogs": {
+    "id": "meshing-cogs",
+    "name": "맞물린 톱니",
+    "path": "harmony",
+    "rarity": 3
+  },
+  "passkey": {
+    "id": "passkey",
+    "name": "영험한 열쇠",
+    "path": "erudition",
+    "rarity": 3
+  },
+  "adversarial": {
+    "id": "adversarial",
+    "name": "대립",
+    "path": "the-hunt",
+    "rarity": 3
+  },
+  "multiplication": {
+    "id": "multiplication",
+    "name": "증식",
+    "path": "abundance",
+    "rarity": 3
+  },
+  "mutual-demise": {
+    "id": "mutual-demise",
+    "name": "전멸",
+    "path": "destruction",
+    "rarity": 3
+  },
+  "pioneering": {
+    "id": "pioneering",
+    "name": "강토 개척",
+    "path": "preservation",
+    "rarity": 3
+  },
+  "hidden-shadow": {
+    "id": "hidden-shadow",
+    "name": "숨은 그림자",
+    "path": "nihility",
+    "rarity": 3
+  },
+  "mediation": {
+    "id": "mediation",
+    "name": "어울림",
+    "path": "harmony",
+    "rarity": 3
+  },
+  "sagacity": {
+    "id": "sagacity",
+    "name": "식견",
+    "path": "erudition",
+    "rarity": 3
+  },
+  "post-op-conversation": {
+    "id": "post-op-conversation",
+    "name": "수술 후의 대화",
+    "path": "abundance",
+    "rarity": 4
+  },
+  "good-night-and-sleep-well": {
+    "id": "good-night-and-sleep-well",
+    "name": "밤 인사와 잠든 얼굴",
+    "path": "nihility",
+    "rarity": 4
+  },
+  "day-one-of-my-new-life": {
+    "id": "day-one-of-my-new-life",
+    "name": "여생의 첫날",
+    "path": "preservation",
+    "rarity": 4
+  },
+  "only-silence-remains": {
+    "id": "only-silence-remains",
+    "name": "침묵만이",
+    "path": "the-hunt",
+    "rarity": 4
+  },
+  "memories-of-the-past": {
+    "id": "memories-of-the-past",
+    "name": "기억 속 모습",
+    "path": "harmony",
+    "rarity": 4
+  },
+  "the-moles-welcome-you": {
+    "id": "the-moles-welcome-you",
+    "name": "두더지파가 환영해",
+    "path": "destruction",
+    "rarity": 4
+  },
+  "the-birth-of-the-self": {
+    "id": "the-birth-of-the-self",
+    "name": "「나」의 탄생",
+    "path": "erudition",
+    "rarity": 4
+  },
+  "shared-feeling": {
+    "id": "shared-feeling",
+    "name": "같은 심정",
+    "path": "abundance",
+    "rarity": 4
+  },
+  "eyes-of-the-prey": {
+    "id": "eyes-of-the-prey",
+    "name": "사냥감의 시선",
+    "path": "nihility",
+    "rarity": 4
+  },
+  "landaus-choice": {
+    "id": "landaus-choice",
+    "name": "랜도의 선택",
+    "path": "preservation",
+    "rarity": 4
+  },
+  "swordplay": {
+    "id": "swordplay",
+    "name": "논검",
+    "path": "the-hunt",
+    "rarity": 4
+  },
+  "planetary-rendezvous": {
+    "id": "planetary-rendezvous",
+    "name": "행성과의 만남",
+    "path": "harmony",
+    "rarity": 4
+  },
+  "a-secret-vow": {
+    "id": "a-secret-vow",
+    "name": "비밀 맹세",
+    "path": "destruction",
+    "rarity": 4
+  },
+  "make-the-world-clamor": {
+    "id": "make-the-world-clamor",
+    "name": "세상을 진정시키지 마",
+    "path": "erudition",
+    "rarity": 4
+  },
+  "perfect-timing": {
+    "id": "perfect-timing",
+    "name": "알맞은 타이밍",
+    "path": "abundance",
+    "rarity": 4
+  },
+  "resolution-shines-as-pearls-of-sweat": {
+    "id": "resolution-shines-as-pearls-of-sweat",
+    "name": "땀방울처럼 빛나는 결심",
+    "path": "nihility",
+    "rarity": 4
+  },
+  "trend-of-the-universal-market": {
+    "id": "trend-of-the-universal-market",
+    "name": "우주 시장 동향",
+    "path": "preservation",
+    "rarity": 4
+  },
+  "subscribe-for-more": {
+    "id": "subscribe-for-more",
+    "name": "팔로우를 부탁해!",
+    "path": "the-hunt",
+    "rarity": 4
+  },
+  "dance-dance-dance": {
+    "id": "dance-dance-dance",
+    "name": "댄스! 댄스! 댄스!",
+    "path": "harmony",
+    "rarity": 4
+  },
+  "under-the-blue-sky": {
+    "id": "under-the-blue-sky",
+    "name": "푸른 하늘 아래",
+    "path": "destruction",
+    "rarity": 4
+  },
+  "geniuses-repose": {
+    "id": "geniuses-repose",
+    "name": "천재들의 휴식",
+    "path": "erudition",
+    "rarity": 4
+  },
+  "quid-pro-quo": {
+    "id": "quid-pro-quo",
+    "name": "등가교환",
+    "path": "abundance",
+    "rarity": 4
+  },
+  "fermata": {
+    "id": "fermata",
+    "name": "페르마타",
+    "path": "nihility",
+    "rarity": 4
+  },
+  "we-are-wildfire": {
+    "id": "we-are-wildfire",
+    "name": "우리는 와일드 파이어",
+    "path": "preservation",
+    "rarity": 4
+  },
+  "river-flows-in-spring": {
+    "id": "river-flows-in-spring",
+    "name": "움트는 봄물",
+    "path": "the-hunt",
+    "rarity": 4
+  },
+  "past-and-future": {
+    "id": "past-and-future",
+    "name": "과거와 미래",
+    "path": "harmony",
+    "rarity": 4
+  },
+  "woof-walk-time": {
+    "id": "woof-walk-time",
+    "name": "멍! 산책 시간!",
+    "path": "destruction",
+    "rarity": 4
+  },
+  "the-seriousness-of-breakfast": {
+    "id": "the-seriousness-of-breakfast",
+    "name": "느낌 있는 아침 식사 루틴",
+    "path": "erudition",
+    "rarity": 4
+  },
+  "warmth-shortens-cold-nights": {
+    "id": "warmth-shortens-cold-nights",
+    "name": "따듯한 밤은 길지 않고",
+    "path": "abundance",
+    "rarity": 4
+  },
+  "we-will-meet-again": {
+    "id": "we-will-meet-again",
+    "name": "훗날 기약",
+    "path": "nihility",
+    "rarity": 4
+  },
+  "this-is-me": {
+    "id": "this-is-me",
+    "name": "이게 바로 나야!",
+    "path": "preservation",
+    "rarity": 4
+  },
+  "return-to-darkness": {
+    "id": "return-to-darkness",
+    "name": "또다시 저승으로",
+    "path": "the-hunt",
+    "rarity": 4
+  },
+  "carve-the-moon-weave-the-clouds": {
+    "id": "carve-the-moon-weave-the-clouds",
+    "name": "누월재운의 뜻",
+    "path": "harmony",
+    "rarity": 4
+  },
+  "nowhere-to-run": {
+    "id": "nowhere-to-run",
+    "name": "도망칠 곳은 없다",
+    "path": "destruction",
+    "rarity": 4
+  },
+  "today-is-another-peaceful-day": {
+    "id": "today-is-another-peaceful-day",
+    "name": "오늘도 평화로운 하루",
+    "path": "erudition",
+    "rarity": 4
+  },
+  "what-is-real": {
+    "id": "what-is-real",
+    "name": "무엇이 진실인가",
+    "path": "abundance",
+    "rarity": 4
+  },
+  "dreamville-adventure": {
+    "id": "dreamville-adventure",
+    "name": "좋은꿈 마을 대모험",
+    "path": "harmony",
+    "rarity": 4
+  },
+  "final-victor": {
+    "id": "final-victor",
+    "name": "최후의 승자",
+    "path": "the-hunt",
+    "rarity": 4
+  },
+  "flames-afar": {
+    "id": "flames-afar",
+    "name": "불의 먼 곳에서",
+    "path": "destruction",
+    "rarity": 4
+  },
+  "destinys-threads-forewoven": {
+    "id": "destinys-threads-forewoven",
+    "name": "운명의 실을 엮다",
+    "path": "preservation",
+    "rarity": 4
+  },
+  "the-day-the-cosmos-fell": {
+    "id": "the-day-the-cosmos-fell",
+    "name": "은하 함락의 날",
+    "path": "erudition",
+    "rarity": 4
+  },
+  "its-showtime": {
+    "id": "its-showtime",
+    "name": "쇼타임",
+    "path": "nihility",
+    "rarity": 4
+  },
+  "indelible-promise": {
+    "id": "indelible-promise",
+    "name": "마음에 새긴 약속",
+    "path": "destruction",
+    "rarity": 4
+  },
+  "concert-for-two": {
+    "id": "concert-for-two",
+    "name": "두 사람의 콘서트",
+    "path": "preservation",
+    "rarity": 4
+  },
+  "boundless-choreo": {
+    "id": "boundless-choreo",
+    "name": "끝없는 춤",
+    "path": "nihility",
+    "rarity": 4
+  },
+  "after-the-charmony-fall": {
+    "id": "after-the-charmony-fall",
+    "name": "조화가 침묵한 후",
+    "path": "erudition",
+    "rarity": 4
+  },
+  "before-the-tutorial-mission-starts": {
+    "id": "before-the-tutorial-mission-starts",
+    "name": "초보자 임무 시작 전",
+    "path": "nihility",
+    "rarity": 4
+  },
+  "hey-over-here": {
+    "id": "hey-over-here",
+    "name": "저기, 나 여기 있어",
+    "path": "abundance",
+    "rarity": 4
+  },
+  "for-tomorrows-journey": {
+    "id": "for-tomorrows-journey",
+    "name": "내일을 위한 여정",
+    "path": "harmony",
+    "rarity": 4
+  },
+  "night-on-the-milky-way": {
+    "id": "night-on-the-milky-way",
+    "name": "은하철도의 밤",
+    "path": "erudition",
+    "rarity": 5
+  },
+  "in-the-night": {
+    "id": "in-the-night",
+    "name": "야경 속에서",
+    "path": "the-hunt",
+    "rarity": 5
+  },
+  "something-irreplaceable": {
+    "id": "something-irreplaceable",
+    "name": "대체할 수 없는 것",
+    "path": "destruction",
+    "rarity": 5
+  },
+  "but-the-battle-isnt-over": {
+    "id": "but-the-battle-isnt-over",
+    "name": "아직 전투는 끝나지 않았다",
+    "path": "harmony",
+    "rarity": 5
+  },
+  "in-the-name-of-the-world": {
+    "id": "in-the-name-of-the-world",
+    "name": "세계의 이름으로",
+    "path": "nihility",
+    "rarity": 5
+  },
+  "moment-of-victory": {
+    "id": "moment-of-victory",
+    "name": "승리의 순간",
+    "path": "preservation",
+    "rarity": 5
+  },
+  "patience-is-all-you-need": {
+    "id": "patience-is-all-you-need",
+    "name": "필요한 건 기다림뿐",
+    "path": "nihility",
+    "rarity": 5
+  },
+  "incessant-rain": {
+    "id": "incessant-rain",
+    "name": "계속 내리는 비",
+    "path": "nihility",
+    "rarity": 5
+  },
+  "echoes-of-the-coffin": {
+    "id": "echoes-of-the-coffin",
+    "name": "관의 울림",
+    "path": "abundance",
+    "rarity": 5
+  },
+  "the-unreachable-side": {
+    "id": "the-unreachable-side",
+    "name": "닿을 수 없는 저편",
+    "path": "destruction",
+    "rarity": 5
+  },
+  "before-dawn": {
+    "id": "before-dawn",
+    "name": "동트기 전",
+    "path": "erudition",
+    "rarity": 5
+  },
+  "she-already-shut-her-eyes": {
+    "id": "she-already-shut-her-eyes",
+    "name": "그녀는 두 눈을 감았네",
+    "path": "preservation",
+    "rarity": 5
+  },
+  "sleep-like-the-dead": {
+    "id": "sleep-like-the-dead",
+    "name": "깊게 든 단잠",
+    "path": "the-hunt",
+    "rarity": 5
+  },
+  "time-waits-for-no-one": {
+    "id": "time-waits-for-no-one",
+    "name": "세월은 흐를 뿐",
+    "path": "abundance",
+    "rarity": 5
+  },
+  "i-shall-be-my-own-sword": {
+    "id": "i-shall-be-my-own-sword",
+    "name": "이 몸이 검이니",
+    "path": "destruction",
+    "rarity": 5
+  },
+  "brighter-than-the-sun": {
+    "id": "brighter-than-the-sun",
+    "name": "태양보다 밝게 빛나는 것",
+    "path": "destruction",
+    "rarity": 5
+  },
+  "worrisome-blissful": {
+    "id": "worrisome-blissful",
+    "name": "고민, 그리고 행복",
+    "path": "the-hunt",
+    "rarity": 5
+  },
+  "night-of-fright": {
+    "id": "night-of-fright",
+    "name": "섬뜩한 밤",
+    "path": "abundance",
+    "rarity": 5
+  },
+  "an-instant-before-a-gaze": {
+    "id": "an-instant-before-a-gaze",
+    "name": "눈에 담긴 순간",
+    "path": "erudition",
+    "rarity": 5
+  },
+  "past-self-in-mirror": {
+    "id": "past-self-in-mirror",
+    "name": "거울 속 지난날의 나",
+    "path": "harmony",
+    "rarity": 5
+  },
+  "baptism-of-pure-thought": {
+    "id": "baptism-of-pure-thought",
+    "name": "순수 사유의 세례",
+    "path": "the-hunt",
+    "rarity": 5
+  },
+  "earthly-escapade": {
+    "id": "earthly-escapade",
+    "name": "속세에서의 유희",
+    "path": "harmony",
+    "rarity": 5
+  },
+  "reforged-remembrance": {
+    "id": "reforged-remembrance",
+    "name": "시간의 기억에 대한 재구성",
+    "path": "nihility",
+    "rarity": 5
+  },
+  "inherently-unjust-destiny": {
+    "id": "inherently-unjust-destiny",
+    "name": "언제나 불공평한 운명",
+    "path": "preservation",
+    "rarity": 5
+  },
+  "along-the-passing-shore": {
+    "id": "along-the-passing-shore",
+    "name": "흘러가는 강가를 따라",
+    "path": "nihility",
+    "rarity": 5
+  },
+  "whereabouts-should-dreams-rest": {
+    "id": "whereabouts-should-dreams-rest",
+    "name": "꿈은 어디로 돌아가야 하는가",
+    "path": "destruction",
+    "rarity": 5
+  },
+  "flowing-nightglow": {
+    "id": "flowing-nightglow",
+    "name": "찬란하게 빛나는 밤",
+    "path": "harmony",
+    "rarity": 5
+  },
+  "sailing-towards-a-second-life": {
+    "id": "sailing-towards-a-second-life",
+    "name": "두 번째 생명을 향해",
+    "path": "the-hunt",
+    "rarity": 5
+  },
+  "yet-hope-is-priceless": {
+    "id": "yet-hope-is-priceless",
+    "name": "값을 매길 수 없는 건 희망뿐",
+    "path": "erudition",
+    "rarity": 5
+  },
+  "on-the-fall-of-an-aeon": {
+    "id": "on-the-fall-of-an-aeon",
+    "name": "어떤 에이언즈의 몰락",
+    "path": "destruction",
+    "rarity": 5
+  },
+  "cruising-in-the-stellar-sea": {
+    "id": "cruising-in-the-stellar-sea",
+    "name": "별바다 순항",
+    "path": "the-hunt",
+    "rarity": 5
+  },
+  "texture-of-memories": {
+    "id": "texture-of-memories",
+    "name": "기억의 소재",
+    "path": "preservation",
+    "rarity": 5
+  },
+  "solitary-healing": {
+    "id": "solitary-healing",
+    "name": "고독의 치유",
+    "path": "nihility",
+    "rarity": 5
+  },
+  "eternal-calculus": {
+    "id": "eternal-calculus",
+    "name": "멈추지 않는 연산",
+    "path": "erudition",
+    "rarity": 5
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "1001": {
+    "id": "1001",
+    "name": "Salto estelar"
+  },
+  "2003": {
+    "id": "2003",
+    "name": "Mariposa en el filo"
+  },
+  "2004": {
+    "id": "2004",
+    "name": "Espiral de la lanza celestial"
+  },
+  "2005": {
+    "id": "2005",
+    "name": "Contrato cero"
+  },
+  "2006": {
+    "id": "2006",
+    "name": "Búsqueda terrenal"
+  },
+  "2007": {
+    "id": "2007",
+    "name": "Alma perdida"
+  },
+  "2008": {
+    "id": "2008",
+    "name": "Nessun dorma"
+  },
+  "2009": {
+    "id": "2009",
+    "name": "Ablución dracónica"
+  },
+  "2010": {
+    "id": "2010",
+    "name": "Predicciones, augurios y profecías"
+  },
+  "2011": {
+    "id": "2011",
+    "name": "Ligero eclipse de luna"
+  },
+  "2012": {
+    "id": "2012",
+    "name": "Cláusula de extinción"
+  },
+  "2013": {
+    "id": "2013",
+    "name": "Mariposa en el filo"
+  },
+  "2014": {
+    "id": "2014",
+    "name": "Florecimiento sombrío"
+  },
+  "2015": {
+    "id": "2015",
+    "name": "Fragante corona de espinas"
+  },
+  "2016": {
+    "id": "2016",
+    "name": "Contrato cero"
+  },
+  "2017": {
+    "id": "2017",
+    "name": "Tríptico floral"
+  },
+  "2018": {
+    "id": "2018",
+    "name": "Alma perdida"
+  },
+  "2019": {
+    "id": "2019",
+    "name": "Cambio constante"
+  },
+  "2020": {
+    "id": "2020",
+    "name": "Nessun dorma"
+  },
+  "2021": {
+    "id": "2021",
+    "name": "Ondas en el reflejo"
+  },
+  "2022": {
+    "id": "2022",
+    "name": "Ablución dracónica"
+  },
+  "2023": {
+    "id": "2023",
+    "name": "Esplendor resplandeciente"
+  },
+  "2024": {
+    "id": "2024",
+    "name": "Espiral de la lanza celestial"
+  },
+  "2025": {
+    "id": "2025",
+    "name": "Palabras de antaño"
+  },
+  "2026": {
+    "id": "2026",
+    "name": "Búsqueda terrenal"
+  },
+  "2027": {
+    "id": "2027",
+    "name": "Encarcelamiento dorado"
+  },
+  "2028": {
+    "id": "2028",
+    "name": "Ligero eclipse de luna"
+  },
+  "2029": {
+    "id": "2029",
+    "name": "Gorjeo bien temperado"
+  },
+  "2030": {
+    "id": "2030",
+    "name": "Cláusula de extinción"
+  },
+  "2031": {
+    "id": "2031",
+    "name": "Estrella solitaria del sendero polvoriento"
+  },
+  "2032": {
+    "id": "2032",
+    "name": "Predicciones, augurios y profecías"
+  },
+  "2033": {
+    "id": "2033",
+    "name": "Crisálida enardecida"
+  },
+  "2034": {
+    "id": "2034",
+    "name": "Tríptico floral"
+  },
+  "2035": {
+    "id": "2035",
+    "name": "Vida empeñada, destino pactado"
+  },
+  "2036": {
+    "id": "2036",
+    "name": "Fragante corona de espinas"
+  },
+  "3003": {
+    "id": "3003",
+    "name": "Fijación brillante"
+  },
+  "3004": {
+    "id": "3004",
+    "name": "Fijación brillante"
+  },
+  "3005": {
+    "id": "3005",
+    "name": "Fijación brillante"
+  },
+  "3006": {
+    "id": "3006",
+    "name": "Fijación brillante"
+  },
+  "3007": {
+    "id": "3007",
+    "name": "Fijación brillante"
+  },
+  "3008": {
+    "id": "3008",
+    "name": "Fijación brillante"
+  },
+  "3009": {
+    "id": "3009",
+    "name": "Fijación brillante"
+  },
+  "3010": {
+    "id": "3010",
+    "name": "Fijación brillante"
+  },
+  "3011": {
+    "id": "3011",
+    "name": "Fijación brillante"
+  },
+  "3012": {
+    "id": "3012",
+    "name": "Fijación brillante"
+  },
+  "3013": {
+    "id": "3013",
+    "name": "Reminiscencia pasada"
+  },
+  "3014": {
+    "id": "3014",
+    "name": "Fijación brillante"
+  },
+  "3015": {
+    "id": "3015",
+    "name": "Fijación brillante"
+  },
+  "3016": {
+    "id": "3016",
+    "name": "Reminiscencia pasada"
+  },
+  "3017": {
+    "id": "3017",
+    "name": "Fijación brillante"
+  },
+  "3018": {
+    "id": "3018",
+    "name": "Reminiscencia pasada"
+  },
+  "3019": {
+    "id": "3019",
+    "name": "Fijación brillante"
+  },
+  "3020": {
+    "id": "3020",
+    "name": "Reminiscencia pasada"
+  },
+  "3021": {
+    "id": "3021",
+    "name": "Fijación brillante"
+  },
+  "3022": {
+    "id": "3022",
+    "name": "Reminiscencia pasada"
+  },
+  "3023": {
+    "id": "3023",
+    "name": "Fijación brillante"
+  },
+  "3024": {
+    "id": "3024",
+    "name": "Reminiscencia pasada"
+  },
+  "3025": {
+    "id": "3025",
+    "name": "Fijación brillante"
+  },
+  "3026": {
+    "id": "3026",
+    "name": "Reminiscencia pasada"
+  },
+  "3027": {
+    "id": "3027",
+    "name": "Fijación brillante"
+  },
+  "3028": {
+    "id": "3028",
+    "name": "Reminiscencia pasada"
+  },
+  "3029": {
+    "id": "3029",
+    "name": "Fijación brillante"
+  },
+  "3030": {
+    "id": "3030",
+    "name": "Reminiscencia pasada"
+  },
+  "3031": {
+    "id": "3031",
+    "name": "Fijación brillante"
+  },
+  "3032": {
+    "id": "3032",
+    "name": "Reminiscencia pasada"
+  },
+  "3033": {
+    "id": "3033",
+    "name": "Fijación brillante"
+  },
+  "3034": {
+    "id": "3034",
+    "name": "Reminiscencia pasada"
+  },
+  "3035": {
+    "id": "3035",
+    "name": "Fijación brillante"
+  },
+  "3036": {
+    "id": "3036",
+    "name": "Reminiscencia pasada"
+  },
+  "4001": {
+    "id": "4001",
+    "name": "Salto de partida"
+  }
+}
