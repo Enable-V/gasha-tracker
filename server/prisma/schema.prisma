@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  uid         String   @unique @db.VarChar(20)
+  username    String   @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  gachaPulls  GachaPull[]
+  userStats   UserStats[]
+  
+  @@map("users")
+}
+
+model Banner {
+  id          Int      @id @default(autoincrement())
+  bannerId    String   @unique @map("banner_id") @db.VarChar(20)
+  bannerName  String   @map("banner_name") @db.VarChar(100)
+  bannerType  BannerType @map("banner_type")
+  startTime   DateTime? @map("start_time")
+  endTime     DateTime? @map("end_time")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  gachaPulls  GachaPull[]
+  
+  @@map("banners")
+}
+
+model GachaPull {
+  id          BigInt   @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  bannerId    String   @map("banner_id") @db.VarChar(20)
+  gachaId     String   @unique @map("gacha_id") @db.VarChar(50)
+  itemName    String   @map("item_name") @db.VarChar(100)
+  itemType    String   @map("item_type") @db.VarChar(50)
+  rankType    Int      @map("rank_type")
+  time        DateTime
+  pityCount   Int      @default(0) @map("pity_count")
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  banner      Banner   @relation(fields: [bannerId], references: [bannerId])
+  
+  @@index([userId, bannerId])
+  @@index([time])
+  @@index([rankType])
+  @@map("gacha_pulls")
+}
+
+model UserStats {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  bannerType        String   @map("banner_type") @db.VarChar(20)
+  totalPulls        Int      @default(0) @map("total_pulls")
+  fiveStarCount     Int      @default(0) @map("five_star_count")
+  fourStarCount     Int      @default(0) @map("four_star_count")
+  threeStarCount    Int      @default(0) @map("three_star_count")
+  currentPity       Int      @default(0) @map("current_pity")
+  lastFiveStarTime  DateTime? @map("last_five_star_time")
+  lastUpdated       DateTime @updatedAt @map("last_updated")
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, bannerType], name: "unique_user_banner")
+  @@map("user_stats")
+}
+
+enum BannerType {
+  character
+  weapon
+  standard
+  beginner
+}

@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-hsr-dark to-hsr-darker text-white;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white/10 backdrop-blur-md rounded-lg border border-white/20 p-6 shadow-lg;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-hsr-gold to-yellow-400 text-black px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:shadow-hsr-gold/50 transition-all duration-300;
+  }
+  
+  .btn-secondary {
+    @apply bg-white/10 backdrop-blur-md border border-white/30 px-6 py-3 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300;
+  }
+  
+  .rarity-5 {
+    @apply bg-gradient-to-r from-hsr-gold to-yellow-400 text-black;
+  }
+  
+  .rarity-4 {
+    @apply bg-gradient-to-r from-hsr-purple to-purple-400 text-white;
+  }
+  
+  .rarity-3 {
+    @apply bg-gradient-to-r from-hsr-blue to-blue-400 text-white;
+  }
+  
+  .stat-card {
+    @apply card hover:scale-105 transition-transform duration-300;
+  }
+  
+  .loading-spinner {
+    @apply inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite];
+  }
+}
