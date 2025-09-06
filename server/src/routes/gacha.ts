@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { PrismaClient } from '@prisma/client'
 import { authenticateOptional, requireOwnership, AuthRequest } from '../middleware/auth'
+import { logger } from '../middleware/logger'
 
 const router = Router();
 const prisma = new PrismaClient()
@@ -124,7 +125,7 @@ router.get('/stats/:uid', authenticateOptional, requireOwnership, async (req: Au
 });
 
 // Import gacha data
-router.post('/import/:uid', async (req: Request, res: Response) => {
+router.post('/import/:uid', async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.params;
     const { gachaData } = req.body;
@@ -134,7 +135,7 @@ router.post('/import/:uid', async (req: Request, res: Response) => {
     }
     
     // Find or create user
-    const user = await req.prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { uid }
     });
     
@@ -148,7 +149,7 @@ router.post('/import/:uid', async (req: Request, res: Response) => {
     for (const pull of gachaData) {
       try {
         // Calculate pity count
-        const previousPulls = await req.prisma.gachaPull.findMany({
+        const previousPulls = await prisma.gachaPull.findMany({
           where: {
             userId: user.id,
             bannerId: pull.gacha_type,
@@ -163,7 +164,7 @@ router.post('/import/:uid', async (req: Request, res: Response) => {
           pityCount++;
         }
         
-        await req.prisma.gachaPull.create({
+        await prisma.gachaPull.create({
           data: {
             userId: user.id,
             bannerId: pull.gacha_type,
@@ -187,7 +188,7 @@ router.post('/import/:uid', async (req: Request, res: Response) => {
     }
     
     // Update user statistics
-    await updateUserStats(req.prisma, user.id);
+    await updateUserStats(prisma, user.id);
     
     res.json({
       message: 'Gacha data imported successfully',
@@ -195,7 +196,7 @@ router.post('/import/:uid', async (req: Request, res: Response) => {
       skipped: skippedCount
     });
   } catch (error) {
-    req.logger.error('Error importing gacha data:', error);
+    logger.error('Error importing gacha data:', error);
     res.status(500).json({ error: 'Failed to import gacha data' });
   }
 });

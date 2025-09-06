@@ -42,6 +42,29 @@ router.post('/update', authenticateToken, async (req, res) => {
   }
 })
 
+// Тестовый endpoint для обновления без аутентификации (только для разработки)
+router.post('/test-update', async (req, res) => {
+  try {
+    console.log('🧪 Testing banner image update with new rate limiting...')
+    const result = await bannerImageService.manualUpdate()
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        stats: result.stats,
+        note: 'Test update completed with rate limiting protection'
+      })
+    } else {
+      res.status(500).json({
+        error: result.message
+      })
+    }
+  } catch (error) {
+    console.error('Error in test update:', error)
+    res.status(500).json({ error: 'Failed to test update banner images' })
+  }
+})
+
 // Получение списка доступных изображений баннеров
 router.get('/list', async (req, res) => {
   try {

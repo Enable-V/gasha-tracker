@@ -1,199 +1,167 @@
-import { Router } from 'express';
-import type { Request, Response } from 'express';
+import { Router, Request, Response } from 'express'
+import { PrismaClient } from '@prisma/client'
+import { authenticateToken } from '../middleware/auth'
 
-const router = Router();
-
-// Get overall statistics
-router.get('/overall', async (req: Request, res: Response) => {
-  try {
-    const totalUsers = await req.prisma.user.count();
-    const totalPulls = await req.prisma.gachaPull.count();
-    
-    const rarityStats = await req.prisma.gachaPull.groupBy({
-      by: ['rankType'],
-      _count: {
-        rankType: true
+// Расширяем тип Request
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number
+        uid: string
+        username: string
+        email?: string
       }
-    });
-    
-    const bannerStats = await req.prisma.gachaPull.groupBy({
+    }
+  }
+}
+
+const prisma = new PrismaClient()
+const router = Router()
+
+// Получение статистики пользователя
+router.get('/:uid', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { uid } = req.params
+
+    // Проверяем, что пользователь запрашивает свою статистику
+    if (req.user?.uid !== uid) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { uid }
+    })
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Получаем статистику по баннерам
+    const bannerStats = await prisma.gachaPull.groupBy({
       by: ['bannerId'],
       _count: {
         bannerId: true
       },
-      include: {
-        banner: true
+      where: {
+        userId: user.id
       }
-    });
-    
-    res.json({
-      totalUsers,
-      totalPulls,
-      rarityStats,
-      bannerStats
-    });
-  } catch (error) {
-    req.logger.error('Error fetching overall stats:', error);
-    res.status(500).json({ error: 'Failed to fetch overall statistics' });
-  }
-});
+    })
 
-// Get user statistics
-router.get('/user/:uid', async (req: Request, res: Response) => {
-  try {
-    const { uid } = req.params;
-    
-    const user = await req.prisma.user.findUnique({
-      where: { uid }
-    });
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    const userStats = await req.prisma.userStats.findMany({
-      where: { userId: user.id }
-    });
-    
-    // Get pull history by month
-    const pullHistory = await req.prisma.$queryRaw`
-      SELECT 
-        DATE_FORMAT(time, '%Y-%m') as month,
-        COUNT(*) as count,
-        SUM(CASE WHEN rank_type = 5 THEN 1 ELSE 0 END) as five_star_count,
-        SUM(CASE WHEN rank_type = 4 THEN 1 ELSE 0 END) as four_star_count
-      FROM gacha_pulls 
-      WHERE user_id = ${user.id}
-      GROUP BY DATE_FORMAT(time, '%Y-%m')
-      ORDER BY month DESC
-      LIMIT 12
-    `;
-    
-    // Get luck statistics
-    const fiveStarPulls = await req.prisma.gachaPull.findMany({
+    // Получаем общую статистику
+    const totalPulls = await prisma.gachaPull.count({
+      where: {
+        userId: user.id
+      }
+    })
+
+    const fiveStarPulls = await prisma.gachaPull.count({
       where: {
         userId: user.id,
         rankType: 5
-      },
-      select: {
-        pityCount: true,
-        time: true,
-        itemName: true,
-        banner: {
-          select: {
-            bannerType: true
-          }
+      }
+    })
+
+    const fourStarPulls = await prisma.gachaPull.count({
+      where: {
+        userId: user.id,
+        rankType: 4
+      }
+    })
+
+    // Получаем баннеры с их именами
+    const bannersWithNames = await Promise.all(
+      bannerStats.map(async (stat) => {
+        const banner = await prisma.banner.findUnique({
+          where: { bannerId: stat.bannerId }
+        })
+        return {
+          bannerId: stat.bannerId,
+          bannerName: banner?.bannerName || 'Unknown Banner',
+          count: stat._count.bannerId
         }
+      })
+    )
+
+    res.json({
+      user: {
+        uid: user.uid,
+        username: user.username
+      },
+      stats: {
+        totalPulls,
+        fiveStarPulls,
+        fourStarPulls,
+        fiveStarRate: totalPulls > 0 ? (fiveStarPulls / totalPulls * 100).toFixed(2) : '0.00',
+        fourStarRate: totalPulls > 0 ? (fourStarPulls / totalPulls * 100).toFixed(2) : '0.00'
+      },
+      bannerStats: bannersWithNames
+    })
+  } catch (error) {
+    console.error('Error getting user stats:', error)
+    res.status(500).json({ error: 'Failed to get user stats' })
+  }
+})
+
+// Получение детальной статистики по баннеру
+router.get('/:uid/banner/:bannerId', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { uid, bannerId } = req.params
+
+    // Проверяем, что пользователь запрашивает свою статистику
+    if (req.user?.uid !== uid) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { uid }
+    })
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const banner = await prisma.banner.findUnique({
+      where: { bannerId: bannerId }
+    })
+
+    if (!banner) {
+      return res.status(404).json({ error: 'Banner not found' })
+    }
+
+    const pulls = await prisma.gachaPull.findMany({
+      where: {
+        userId: user.id,
+        bannerId: bannerId
       },
       orderBy: {
         time: 'desc'
-      }
-    });
-    
-    // Calculate average pity
-    const avgPity = fiveStarPulls.length > 0 
-      ? fiveStarPulls.reduce((sum, pull) => sum + pull.pityCount, 0) / fiveStarPulls.length
-      : 0;
-    
+      },
+      take: 100 // Ограничиваем количество записей
+    })
+
+    const fiveStarItems = pulls.filter(p => p.rankType === 5)
+    const fourStarItems = pulls.filter(p => p.rankType === 4)
+
     res.json({
-      userStats,
-      pullHistory,
-      fiveStarPulls,
-      avgPity: Math.round(avgPity * 100) / 100
-    });
-  } catch (error) {
-    req.logger.error('Error fetching user stats:', error);
-    res.status(500).json({ error: 'Failed to fetch user statistics' });
-  }
-});
-
-// Get banner statistics
-router.get('/banner/:bannerId', async (req: Request, res: Response) => {
-  try {
-    const { bannerId } = req.params;
-    
-    const banner = await req.prisma.banner.findUnique({
-      where: { bannerId }
-    });
-    
-    if (!banner) {
-      return res.status(404).json({ error: 'Banner not found' });
-    }
-    
-    const bannerStats = await req.prisma.gachaPull.groupBy({
-      by: ['rankType'],
-      where: { bannerId },
-      _count: {
-        rankType: true
-      }
-    });
-    
-    const topItems = await req.prisma.gachaPull.groupBy({
-      by: ['itemName', 'rankType'],
-      where: { bannerId },
-      _count: {
-        itemName: true
+      banner: {
+        id: banner.id,
+        name: banner.bannerName,
+        type: banner.bannerType
       },
-      orderBy: {
-        _count: {
-          itemName: 'desc'
-        }
+      stats: {
+        totalPulls: pulls.length,
+        fiveStarCount: fiveStarItems.length,
+        fourStarCount: fourStarItems.length,
+        lastFiveStar: fiveStarItems[0]?.time || null,
+        lastFourStar: fourStarItems[0]?.time || null
       },
-      take: 10
-    });
-    
-    res.json({
-      banner,
-      bannerStats,
-      topItems
-    });
+      recentPulls: pulls.slice(0, 20) // Последние 20 крутов
+    })
   } catch (error) {
-    req.logger.error('Error fetching banner stats:', error);
-    res.status(500).json({ error: 'Failed to fetch banner statistics' });
+    console.error('Error getting banner stats:', error)
+    res.status(500).json({ error: 'Failed to get banner stats' })
   }
-});
+})
 
-// Get pity distribution
-router.get('/pity/:uid', async (req: Request, res: Response) => {
-  try {
-    const { uid } = req.params;
-    const { bannerType } = req.query;
-    
-    const user = await req.prisma.user.findUnique({
-      where: { uid }
-    });
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    const whereClause: any = {
-      userId: user.id,
-      rankType: 5
-    };
-    
-    if (bannerType) {
-      whereClause.banner = {
-        bannerType
-      };
-    }
-    
-    const pityDistribution = await req.prisma.gachaPull.groupBy({
-      by: ['pityCount'],
-      where: whereClause,
-      _count: {
-        pityCount: true
-      },
-      orderBy: {
-        pityCount: 'asc'
-      }
-    });
-    
-    res.json(pityDistribution);
-  } catch (error) {
-    req.logger.error('Error fetching pity distribution:', error);
-    res.status(500).json({ error: 'Failed to fetch pity distribution' });
-  }
-});
-
-export default router;
+export default router

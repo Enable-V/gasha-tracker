@@ -47,7 +47,12 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       })
     }
 
-    req.user = user
+    req.user = {
+      id: user.id,
+      uid: user.uid,
+      username: user.username,
+      email: user.email || undefined
+    }
     next()
   } catch (error) {
     return res.status(403).json({ 
@@ -79,7 +84,12 @@ export const authenticateOptional = async (req: AuthRequest, res: Response, next
     })
 
     if (user && user.isActive) {
-      req.user = user
+      req.user = {
+        id: user.id,
+        uid: user.uid,
+        username: user.username,
+        email: user.email || undefined
+      }
     }
   } catch (error) {
     // Игнорируем ошибки токена при опциональной аутентификации

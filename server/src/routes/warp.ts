@@ -1,6 +1,6 @@
 import express from 'express'
 import axios from 'axios'
-import { logger } from '../middleware/logger.js'
+import { logger } from '../middleware/logger'
 
 const router = express.Router()
 
