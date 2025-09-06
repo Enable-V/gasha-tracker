@@ -174,13 +174,36 @@ const Upload = () => {
         {/* Instructions */}
         <div className="card mt-6">
           <h3 className="text-lg font-semibold text-white mb-4">Инструкция по получению ссылки</h3>
-          <ol className="list-decimal list-inside space-y-2 text-gray-300">
-            <li>Закройте игру Honkai Star Rail</li>
+          <ol className="list-decimal list-inside space-y-2 text-gray-300 mb-6">
+            <li>Откройте игру Honkai Star Rail и зайдите в историю круток</li>
+            <li>Закройте игру полностью</li>
             <li>Откройте PowerShell от имени администратора</li>
-            <li>Выполните команду с главной страницы</li>
+            <li>Выполните команду ниже</li>
             <li>Скопируйте полученную ссылку в поле выше</li>
             <li>Нажмите "Загрузить данные" (UID определяется автоматически)</li>
           </ol>
+          
+          {/* PowerShell Command */}
+          <div className="mb-4">
+            <h4 className="text-md font-semibold text-white mb-2">PowerShell команда:</h4>
+            <div className="bg-black/60 rounded-lg p-4 font-mono text-sm overflow-x-auto border border-hsr-gold/30">
+              <code className="text-green-400">
+                {`Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/hsr_getlink.ps1'))}"`}
+              </code>
+            </div>
+            <div className="flex items-center mt-2 space-x-2">
+              <button
+                onClick={() => {
+                  const command = `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/hsr_getlink.ps1'))}"`;
+                  navigator.clipboard.writeText(command);
+                }}
+                className="text-sm bg-hsr-gold/20 hover:bg-hsr-gold/30 text-hsr-gold px-3 py-1 rounded transition-colors"
+              >
+                📋 Копировать команду
+              </button>
+              <span className="text-gray-400 text-xs">Команда скопируется в буфер обмена</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
