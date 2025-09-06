@@ -15,7 +15,6 @@ const Layout = ({ children }: LayoutProps) => {
     { name: 'Панель управления', href: '/dashboard', icon: '📊', protected: true },
     { name: 'Загрузка данных', href: '/upload', icon: '⬆️', protected: true },
     { name: 'Статистика', href: '/statistics', icon: '⭐', protected: true },
-    { name: 'Тест', href: '/test', icon: '🧪' },
   ]
 
   const isActive = (path: string) => location.pathname === path

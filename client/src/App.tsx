@@ -9,6 +9,7 @@ import UserProfile from './pages/UserProfile'
 import TestPage from './pages/TestPage'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import BannerManagement from './pages/BannerManagement'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
 function App() {
@@ -37,6 +38,11 @@ function App() {
           <Route path="/user/:uid" element={
             <ProtectedRoute>
               <UserProfile />
+            </ProtectedRoute>
+          } />
+          <Route path="/banners" element={
+            <ProtectedRoute>
+              <BannerManagement />
             </ProtectedRoute>
           } />
           <Route path="/test" element={<TestPage />} />

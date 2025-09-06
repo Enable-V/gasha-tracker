@@ -12,6 +12,8 @@ import statsRoutes from './routes/stats.js';
 import uploadRoutes from './routes/upload.js';
 import testRoutes from './routes/test.js';
 import authRoutes from './routes/auth.js';
+import { bannerRouter } from './routes/banners.js';
+import { bannerImageService } from './services/bannerImageService.js';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -69,6 +71,7 @@ app.use('/api/gacha', gachaRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/test', testRoutes);
+app.use('/api/banners', bannerRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -109,6 +112,10 @@ process.on('SIGINT', async () => {
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Инициализируем сервис изображений баннеров
+  bannerImageService.initializeCronJobs();
+  logger.info(`🖼️ Banner image service initialized`);
 });
 
 export default app;
