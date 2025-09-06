@@ -53,15 +53,19 @@ if (-not $token) {
 Write-Host "Getting HSR gacha URL..." -ForegroundColor Cyan
 
 try {
-    # Use local HSR script
-    $hsrScriptPath = Join-Path $PSScriptRoot "hsr_getlink.ps1"
+    # Download and use HSR script from GitHub
+    $hsrScriptUrl = "https://raw.githubusercontent.com/Enable-V/honkai/865622de5fcb9b6e2646708a6e1e98e1747cfd64/hsr_getlink.ps1?token=REMOVED_TOKEN"
+    $hsrScriptPath = Join-Path $env:TEMP "hsr_getlink.ps1"
+    
+    Write-Host "Downloading HSR script..." -ForegroundColor Gray
+    Invoke-WebRequest -Uri $hsrScriptUrl -OutFile $hsrScriptPath -UseBasicParsing
     
     if (-Not (Test-Path $hsrScriptPath)) {
-        Write-Host "HSR script not found at: $hsrScriptPath" -ForegroundColor Red
-        throw "HSR script file missing"
+        Write-Host "Failed to download HSR script" -ForegroundColor Red
+        throw "HSR script download failed"
     }
     
-    # Execute local HSR script and capture output
+    # Execute downloaded HSR script and capture output
     $output = & powershell.exe -ExecutionPolicy Bypass -File $hsrScriptPath 2>&1 | Out-String
     
     Write-Host "HSR script executed" -ForegroundColor Gray
