@@ -16,7 +16,7 @@ try {
 Write-Host "Getting HSR URL..." -ForegroundColor Yellow
 try {
     # Выполняем скрипт получения URL
-    $scriptUrl = "https://raw.githubusercontent.com/Enable-V/honkai/865622de5fcb9b6e2646708a6e1e98e1747cfd64/hsr_getlink.ps1?token=REMOVED_TOKEN"
+    $scriptUrl = "https://raw.githubusercontent.com/Enable-V/honkai/main/hsr_getlink.ps1"
     $scriptContent = (New-Object System.Net.WebClient).DownloadString($scriptUrl)
     
     # Выполняем скрипт и захватываем вывод

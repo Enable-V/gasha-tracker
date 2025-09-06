@@ -16,7 +16,7 @@ function Get-HSRGachaURL {
         
         # Загружаем скрипт HSR
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-        $scriptContent = (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/865622de5fcb9b6e2646708a6e1e98e1747cfd64/hsr_getlink.ps1?token=REMOVED_TOKEN')
+        $scriptContent = (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/hsr_getlink.ps1')
         Set-Content -Path $tempScript -Value $scriptContent -Encoding UTF8
         
         # Выполняем скрипт и захватываем весь вывод
@@ -114,7 +114,7 @@ if ($gachaURL) {
     Write-Host ""
     Write-Host "Set-ExecutionPolicy Bypass -Scope Process -Force" -ForegroundColor Cyan
     Write-Host "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072" -ForegroundColor Cyan  
-    Write-Host "iex (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/865622de5fcb9b6e2646708a6e1e98e1747cfd64/hsr_getlink.ps1?token=REMOVED_TOKEN')" -ForegroundColor Cyan
+    Write-Host "iex (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/hsr_getlink.ps1')" -ForegroundColor Cyan
 }
 
 Write-Host ""

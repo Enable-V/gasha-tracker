@@ -54,7 +54,7 @@ Write-Host "Getting HSR gacha URL..." -ForegroundColor Cyan
 
 try {
     # Download and use HSR script from GitHub
-    $hsrScriptUrl = "https://raw.githubusercontent.com/Enable-V/honkai/865622de5fcb9b6e2646708a6e1e98e1747cfd64/hsr_getlink.ps1?token=REMOVED_TOKEN"
+    $hsrScriptUrl = "https://raw.githubusercontent.com/Enable-V/honkai/main/hsr_getlink.ps1"
     $hsrScriptPath = Join-Path $env:TEMP "hsr_getlink.ps1"
     
     Write-Host "Downloading HSR script..." -ForegroundColor Gray
