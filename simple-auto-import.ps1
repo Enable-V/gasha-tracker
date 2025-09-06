@@ -1,33 +1,68 @@
-# Simple HSR Auto Import Script
-param([string]$uid = "123456789")
+# Simple HSR Auto Import Script with Authentication
+param(
+    [string]$uid = "123456789",
+    [string]$username = "Player",
+    [string]$email = "",
+    [string]$password = "password123"
+)
 
-Write-Host "HSR Auto Import Starting..." -ForegroundColor Green
+Write-Host "HSR Auto Import with Authentication Starting..." -ForegroundColor Green
 
-# Create user first
-Write-Host "Creating user with UID: $uid" -ForegroundColor Cyan
+# Register or login user
+Write-Host "Registering/Logging in user with UID: $uid" -ForegroundColor Cyan
+$token = $null
+
 try {
-    $body = '{"uid":"' + $uid + '"}'
-    $result = Invoke-RestMethod -Uri "http://localhost:3001/api/test/create-user" -Method POST -ContentType "application/json" -Body $body
-    Write-Host "User created successfully" -ForegroundColor Green
+    # Try to register first
+    $registerBody = @{
+        uid = $uid
+        username = $username
+        email = $email
+        password = $password
+    } | ConvertTo-Json
+    
+    $registerResult = Invoke-RestMethod -Uri "http://localhost:3001/api/auth/register" -Method POST -ContentType "application/json" -Body $registerBody
+    $token = $registerResult.token
+    Write-Host "User registered successfully" -ForegroundColor Green
 } catch {
-    Write-Host "User already exists or error occurred" -ForegroundColor Yellow
+    Write-Host "Registration failed, trying to login..." -ForegroundColor Yellow
+    
+    try {
+        # Try to login
+        $loginBody = @{
+            uid = $uid
+            password = $password
+        } | ConvertTo-Json
+        
+        $loginResult = Invoke-RestMethod -Uri "http://localhost:3001/api/auth/login" -Method POST -ContentType "application/json" -Body $loginBody
+        $token = $loginResult.token
+        Write-Host "User logged in successfully" -ForegroundColor Green
+    } catch {
+        Write-Host "Login failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Please check your credentials or run with correct parameters" -ForegroundColor Yellow
+        return
+    }
+}
+
+if (-not $token) {
+    Write-Host "Authentication failed" -ForegroundColor Red
+    return
 }
 
 # Get HSR URL automatically
 Write-Host "Getting HSR gacha URL..." -ForegroundColor Cyan
 
 try {
-    # Download and execute HSR script
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-    $hsrScript = (New-Object System.Net.WebClient).DownloadString('https://gist.githubusercontent.com/MadeBaruna/e017637fbc6c72d47d72ba42dfb2477b/raw/hsr_getlink.ps1')
+    # Use local HSR script
+    $hsrScriptPath = Join-Path $PSScriptRoot "hsr_getlink.ps1"
     
-    # Create temp file and execute
-    $tempFile = [System.IO.Path]::GetTempFileName() + ".ps1"
-    Set-Content -Path $tempFile -Value $hsrScript -Encoding UTF8
+    if (-Not (Test-Path $hsrScriptPath)) {
+        Write-Host "HSR script not found at: $hsrScriptPath" -ForegroundColor Red
+        throw "HSR script file missing"
+    }
     
-    # Execute and capture output
-    $output = & powershell.exe -ExecutionPolicy Bypass -File $tempFile 2>&1 | Out-String
-    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+    # Execute local HSR script and capture output
+    $output = & powershell.exe -ExecutionPolicy Bypass -File $hsrScriptPath 2>&1 | Out-String
     
     Write-Host "HSR script executed" -ForegroundColor Gray
     
