@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import multer from 'multer';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import { authenticateToken, requireOwnership, AuthRequest } from '../middleware/auth'
+import { PrismaClient } from '@prisma/client'
 
 const router = Router();
+const prisma = new PrismaClient();
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -20,22 +23,17 @@ const upload = multer({
   }
 });
 
-// Upload gacha data from JSON file
-router.post('/json/:uid', upload.single('gachaFile'), async (req: Request, res: Response) => {
+// Upload gacha data from JSON file (теперь требует аутентификации)
+router.post('/json/:uid', authenticateToken, requireOwnership, upload.single('gachaFile'), async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.params;
     
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    
-    const user = await req.prisma.user.findUnique({
-      where: { uid }
-    });
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+
+    // Пользователь уже аутентифицирован через middleware
+    const user = req.user!;
     
     let gachaData;
     try {
@@ -43,69 +41,57 @@ router.post('/json/:uid', upload.single('gachaFile'), async (req: Request, res: 
     } catch (error) {
       return res.status(400).json({ error: 'Invalid JSON format' });
     }
-    
+
     // Process gacha data
-    const result = await processGachaData(req.prisma, user.id, gachaData);
+    const result = await processGachaData(prisma, user.id, gachaData);
     
     res.json(result);
   } catch (error) {
-    req.logger.error('Error uploading gacha data:', error);
+    console.error('Error uploading gacha data:', error);
     res.status(500).json({ error: 'Failed to upload gacha data' });
   }
 });
 
-// Upload gacha data from HSR URL
-router.post('/url/:uid', async (req: Request, res: Response) => {
+// Upload gacha data from HSR URL (теперь требует аутентификации)
+router.post('/url/:uid', authenticateToken, requireOwnership, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.params;
     const { url } = req.body;
     
-    req.logger.info(`Starting gacha import for UID: ${uid}`);
+    console.log(`Starting gacha import for UID: ${uid}`);
     
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
     
-    const user = await req.prisma.user.findUnique({
-      where: { uid }
-    });
-    
-    if (!user) {
-      // Создаем пользователя если не существует
-      const newUser = await req.prisma.user.create({
-        data: {
-          uid,
-          username: `Player_${uid}`
-        }
-      });
-      req.logger.info(`Created new user: ${uid}`);
-    }
+    // Пользователь уже аутентифицирован через middleware
+    const user = req.user!;
     
     // Extract authkey from URL
     const authkey = extractAuthkey(url);
     if (!authkey) {
-      req.logger.error(`Invalid URL format for UID: ${uid}`);
+      console.error(`Invalid URL format for UID: ${uid}`);
       return res.status(400).json({ error: 'Invalid HSR URL format. Please make sure you copied the complete URL.' });
     }
     
-    req.logger.info(`Extracted authkey for UID: ${uid}`);
+    console.log(`Extracted authkey for UID: ${uid}`);
     
     // Fetch gacha data from HSR API
     const gachaData = await fetchGachaDataFromAPI(authkey, url);
-    req.logger.info(`Fetched ${gachaData.length} gacha records for UID: ${uid}`);
+    console.log(`Fetched ${gachaData.length} gacha records for UID: ${uid}`);
     
     if (gachaData.length === 0) {
       return res.status(400).json({ error: 'No gacha data found. Please make sure you have gacha history in the game.' });
     }
     
     // Process gacha data
-    const result = await processGachaData(req.prisma, user?.id || (await req.prisma.user.findUnique({ where: { uid } }))!.id, gachaData);
+    const result = await processGachaData(prisma, user.id, gachaData);
     
-    req.logger.info(`Import completed for UID: ${uid}. Imported: ${result.imported}, Skipped: ${result.skipped}`);
+    console.log(`Import completed for UID: ${uid}. Imported: ${result.imported}, Skipped: ${result.skipped}`);
     
     res.json(result);
   } catch (error: any) {
-    req.logger.error('Error fetching gacha data from URL:', error);
+    console.error('Error fetching gacha data from URL:', error);
     res.status(500).json({ 
       error: 'Failed to fetch gacha data from URL',
       details: error.message

@@ -11,6 +11,7 @@ import gachaRoutes from './routes/gacha.js';
 import statsRoutes from './routes/stats.js';
 import uploadRoutes from './routes/upload.js';
 import testRoutes from './routes/test.js';
+import authRoutes from './routes/auth.js';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -62,6 +63,7 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/gacha', gachaRoutes);
 app.use('/api/stats', statsRoutes);

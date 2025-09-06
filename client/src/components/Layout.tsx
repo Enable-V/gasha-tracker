@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 interface LayoutProps {
   children: ReactNode
@@ -7,12 +8,13 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const location = useLocation()
+  const { user, logout, isAuthenticated } = useAuth()
 
   const navigation = [
     { name: 'Главная', href: '/', icon: '🏠' },
-    { name: 'Панель управления', href: '/dashboard', icon: '📊' },
-    { name: 'Загрузка данных', href: '/upload', icon: '⬆️' },
-    { name: 'Статистика', href: '/statistics', icon: '⭐' },
+    { name: 'Панель управления', href: '/dashboard', icon: '📊', protected: true },
+    { name: 'Загрузка данных', href: '/upload', icon: '⬆️', protected: true },
+    { name: 'Статистика', href: '/statistics', icon: '⭐', protected: true },
     { name: 'Тест', href: '/test', icon: '🧪' },
   ]
 
@@ -33,7 +35,9 @@ const Layout = ({ children }: LayoutProps) => {
               </div>
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
-                  {navigation.map((item) => (
+                  {navigation
+                    .filter(item => !item.protected || isAuthenticated)
+                    .map((item) => (
                     <Link
                       key={item.name}
                       to={item.href}
@@ -49,6 +53,40 @@ const Layout = ({ children }: LayoutProps) => {
                   ))}
                 </div>
               </div>
+            </div>
+            
+            {/* Auth Section */}
+            <div className="flex items-center space-x-4">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <div className="text-sm">
+                    <span className="text-gray-300">Привет, </span>
+                    <span className="text-hsr-gold font-medium">{user?.username}</span>
+                    <span className="text-gray-400 text-xs ml-2">({user?.uid})</span>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    🚪 Выйти
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <Link
+                    to="/login"
+                    className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    🔐 Войти
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="bg-hsr-gold/20 text-hsr-gold hover:bg-hsr-gold/30 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200"
+                  >
+                    � Регистрация
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

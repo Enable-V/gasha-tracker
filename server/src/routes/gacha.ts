@@ -1,35 +1,38 @@
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import { PrismaClient } from '@prisma/client'
+import { authenticateOptional, requireOwnership, AuthRequest } from '../middleware/auth'
 
 const router = Router();
+const prisma = new PrismaClient()
 
-// Get gacha pulls for a user
-router.get('/user/:uid', async (req: Request, res: Response) => {
+// Get gacha pulls for a user (требует аутентификации и владения)
+router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.params;
     const { banner, limit = 50, offset = 0 } = req.query;
     
-    req.logger.info(`Fetching gacha pulls for UID: ${uid}`);
+    console.log(`Fetching gacha pulls for UID: ${uid}`);
     
-    const user = await req.prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { uid }
     });
     
     if (!user) {
-      req.logger.error(`User not found: ${uid}`);
+      console.error(`User not found: ${uid}`);
       return res.status(404).json({ error: 'User not found' });
     }
     
-    req.logger.info(`Found user: ${user.id} (${user.username})`);
+    console.log(`Found user: ${user.id} (${user.username})`);
     
     const whereClause: any = { userId: user.id };
     if (banner) {
       whereClause.bannerId = banner;
     }
     
-    req.logger.info(`Searching with where clause:`, whereClause);
+    console.log(`Searching with where clause:`, whereClause);
     
-    const pulls = await req.prisma.gachaPull.findMany({
+    const pulls = await prisma.gachaPull.findMany({
       where: whereClause,
       include: {
         banner: true
@@ -41,16 +44,23 @@ router.get('/user/:uid', async (req: Request, res: Response) => {
       skip: Number(offset)
     });
     
-    req.logger.info(`Found ${pulls.length} pulls`);
+    console.log(`Found ${pulls.length} pulls`);
     
-    const total = await req.prisma.gachaPull.count({
+    const total = await prisma.gachaPull.count({
       where: whereClause
     });
     
-    req.logger.info(`Total pulls count: ${total}`);
+    console.log(`Total pulls count: ${total}`);
+    
+    // Преобразуем BigInt в строку для JSON сериализации
+    const serializedPulls = pulls.map((pull: any) => ({
+      ...pull,
+      id: pull.id.toString(), // Преобразуем BigInt в строку
+      time: pull.time.toISOString() // Убеждаемся что дата правильно сериализуется
+    }));
     
     res.json({
-      pulls,
+      pulls: serializedPulls,
       pagination: {
         total,
         limit: Number(limit),
@@ -59,17 +69,17 @@ router.get('/user/:uid', async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    req.logger.error('Error fetching gacha pulls:', error);
+    console.error('Error fetching gacha pulls:', error);
     res.status(500).json({ error: 'Failed to fetch gacha pulls' });
   }
 });
 
-// Get gacha statistics for a user
-router.get('/stats/:uid', async (req: Request, res: Response) => {
+// Get gacha statistics for a user (требует аутентификации и владения)
+router.get('/stats/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.params;
     
-    const user = await req.prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { uid }
     });
     
@@ -77,12 +87,12 @@ router.get('/stats/:uid', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    const stats = await req.prisma.userStats.findMany({
+    const stats = await prisma.userStats.findMany({
       where: { userId: user.id }
     });
     
     // Get recent 5-star pulls
-    const recentFiveStars = await req.prisma.gachaPull.findMany({
+    const recentFiveStars = await prisma.gachaPull.findMany({
       where: {
         userId: user.id,
         rankType: 5
@@ -96,12 +106,19 @@ router.get('/stats/:uid', async (req: Request, res: Response) => {
       take: 10
     });
     
+    // Преобразуем BigInt в строку для JSON сериализации
+    const serializedFiveStars = recentFiveStars.map((pull: any) => ({
+      ...pull,
+      id: pull.id.toString(),
+      time: pull.time.toISOString()
+    }));
+    
     res.json({
       stats,
-      recentFiveStars
+      recentFiveStars: serializedFiveStars
     });
   } catch (error) {
-    req.logger.error('Error fetching gacha stats:', error);
+    console.error('Error fetching gacha stats:', error);
     res.status(500).json({ error: 'Failed to fetch gacha stats' });
   }
 });
