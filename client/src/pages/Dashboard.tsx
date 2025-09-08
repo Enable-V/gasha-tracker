@@ -122,6 +122,35 @@ const Dashboard = () => {
     }
   }
 
+  const clearPulls = async () => {
+    if (!user?.uid) return
+    
+    const gameName = selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'
+    const confirmed = window.confirm(`Вы уверены, что хотите удалить все крутки для ${gameName}? Это действие нельзя отменить.`)
+    
+    if (!confirmed) return
+    
+    try {
+      setLoading(true)
+      
+      if (selectedGame === 'HSR') {
+        await axios.delete(`/api/gacha/clear-pulls/${user.uid}`)
+      } else {
+        await axios.delete(`/api/genshin/clear-pulls/${user.uid}`)
+      }
+      
+      // Перезагружаем данные после очистки
+      await loadUserData(user.uid)
+      
+      alert(`Все крутки ${gameName} успешно удалены!`)
+    } catch (error) {
+      console.error('Error clearing pulls:', error)
+      alert('Ошибка при удалении круток. Попробуйте еще раз.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const getRarityStats = () => {
     if (!gachaData?.pulls) return { total: 0, fiveStar: 0, fourStar: 0, threeStar: 0 }
     
@@ -215,19 +244,20 @@ const Dashboard = () => {
     return bannerCounts
   }
 
-  const getItemImage = (itemName: string, itemType: string) => {
-    const baseUrl = 'https://api.hakush.in/hsr/UI'
-    
-    if (itemType === 'Character') {
-      const formattedName = itemName.replace(/\s+/g, '').toLowerCase()
-      return `${baseUrl}/avatar/${formattedName}.webp`
-    } else if (itemType === 'Light Cone') {
-      const formattedName = itemName.replace(/\s+/g, '').toLowerCase()
-      return `${baseUrl}/lightcone/${formattedName}.webp`
-    }
-    
-    return '/placeholder-item.png'
-  }
+  // Функция для получения изображения предмета (пока не используется)
+  // const getItemImage = (itemName: string, itemType: string) => {
+  //   const baseUrl = 'https://api.hakush.in/hsr/UI'
+  //   
+  //   if (itemType === 'Character') {
+  //     const formattedName = itemName.replace(/\s+/g, '').toLowerCase()
+  //     return `${baseUrl}/avatar/${formattedName}.webp`
+  //   } else if (itemType === 'Light Cone') {
+  //     const formattedName = itemName.replace(/\s+/g, '').toLowerCase()
+  //     return `${baseUrl}/lightcone/${formattedName}.webp`
+  //   }
+  //   
+  //   return '/placeholder-item.png'
+  // }
 
   // Компонент для отображения баннера с изображением
   const BannerCard = ({ banner, count, percentage }: { banner: string, count: number, percentage: string }) => {
@@ -338,6 +368,26 @@ const Dashboard = () => {
               <div className="font-semibold">Genshin Impact</div>
               <div className="text-sm opacity-75 mt-1">原神</div>
             </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Clear Pulls Button */}
+      <div className="card">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-white">🗑️ Очистка данных</h3>
+            <p className="text-gray-400 text-sm mt-1">
+              Удалить все крутки для {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'}
+            </p>
+          </div>
+          <button
+            onClick={clearPulls}
+            disabled={loading}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <span>🗑️</span>
+            <span>Очистить</span>
           </button>
         </div>
       </div>

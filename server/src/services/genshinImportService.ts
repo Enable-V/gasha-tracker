@@ -195,9 +195,12 @@ export class GenshinImportService {
 
             for (const item of items) {
               try {
-                // Проверяем, существует ли уже эта крутка
-                const existing = await prisma.gachaPull.findUnique({
-                  where: { gachaId: `genshin_${item.id}` }
+                // Проверяем, существует ли уже эта крутка для этого пользователя
+                const existing = await prisma.gachaPull.findFirst({
+                  where: {
+                    gachaId: `genshin_${item.id}`,
+                    userId: user.id
+                  }
                 })
 
                 if (existing) {

@@ -72,9 +72,32 @@ router.post('/json/:uid', authenticateToken, requireOwnership, upload.single('ga
     res.status(500).json({ error: 'Failed to upload gacha data' });
   }
 });
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid JSON format' });
+    }
 
-// Upload gacha data from HSR URL (теперь требует аутентификации)
+    console.log(`📁 Processing pom-moe HSR JSON file for UID: ${uid}`)
+    console.log(`� JSON keys found: ${Object.keys(gachaData).join(', ')}`)
+    console.log(`🔍 Checking pom-moe format...`)
 
+    // Определяем формат файла и обрабатываем соответствующим образом
+    let result;
+    if (isPomMoeFormat(gachaData)) {
+      console.log(`✅ Pom-moe format detected successfully!`);
+      console.log(`🚀 Processing pom-moe HSR data for UID: ${uid}`);
+      result = await processPomMoeData(prisma, user.id, gachaData);
+    } else {
+      console.log(`❌ Pom-moe format NOT detected!`);
+      console.log(`🔍 Available keys: ${Object.keys(gachaData).join(', ')}`);
+      return res.status(400).json({ error: 'Unsupported format. Please upload a valid pom-moe JSON file for HSR.' });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error uploading gacha data:', error);
+    res.status(500).json({ error: 'Failed to upload gacha data' });
+  }
+});
 
 // Upload gacha data from HSR URL (теперь требует аутентификации)
 router.post('/url/:uid', authenticateToken, requireOwnership, async (req: AuthRequest, res: Response) => {

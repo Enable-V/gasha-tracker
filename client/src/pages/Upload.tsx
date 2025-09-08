@@ -10,6 +10,7 @@ const Upload = () => {
   const [selectedMethod, setSelectedMethod] = useState<'url' | 'file'>('url')
   const [isLoading, setIsLoading] = useState(false)
   const [url, setUrl] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
 
@@ -22,8 +23,13 @@ const Upload = () => {
       return
     }
 
-    if (!url && selectedMethod === 'url') {
+    if (selectedMethod === 'url' && !url) {
       setError(`Пожалуйста, введите ${selectedGame === 'HSR' ? 'HSR' : 'Genshin Impact'} URL`)
+      return
+    }
+    
+    if (selectedMethod === 'file' && !selectedFile) {
+      setError('Пожалуйста, выберите JSON файл')
       return
     }
     
@@ -44,6 +50,21 @@ const Upload = () => {
         const response = await axios.post(endpoint, payload)
         setResult(response.data)
         setUrl('') // Очищаем URL после успешной загрузки
+      } else if (selectedMethod === 'file') {
+        const formData = new FormData()
+        formData.append('gachaFile', selectedFile!)
+        
+        const endpoint = selectedGame === 'HSR' 
+          ? `/api/upload/json/${uid}` 
+          : `/api/genshin/import/json/${uid}`
+        
+        const response = await axios.post(endpoint, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+        setResult(response.data)
+        setSelectedFile(null) // Очищаем файл после успешной загрузки
       }
     } catch (error: any) {
       console.error('Upload error:', error)
@@ -205,19 +226,53 @@ const Upload = () => {
           {/* File Method */}
           {selectedMethod === 'file' && (
             <div className="mb-6">
-              <label className="block text-white font-semibold mb-2">JSON файл:</label>
+              <label className="block text-white font-semibold mb-2">
+                JSON файл ({selectedGame === 'HSR' ? 'pom-moe' : 'paimon-moe'} формат):
+              </label>
               <div className="border-2 border-dashed border-white/20 rounded-lg p-8 text-center hover:border-hsr-gold/50 transition-colors">
                 <input
                   type="file"
                   accept=".json"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                   className="hidden"
                   id="file-upload"
                 />
                 <label htmlFor="file-upload" className="cursor-pointer">
                   <div className="text-4xl mb-4">📁</div>
-                  <p className="text-white mb-2">Перетащите JSON файл сюда или нажмите для выбора</p>
-                  <p className="text-gray-400 text-sm">Поддерживаются файлы .json</p>
+                  <p className="text-white mb-2">
+                    {selectedFile ? `Выбран файл: ${selectedFile.name}` : 'Перетащите JSON файл сюда или нажмите для выбора'}
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    {selectedFile ? `Размер: ${(selectedFile.size / 1024).toFixed(1)} KB` : `Поддерживаются JSON файлы из ${selectedGame === 'HSR' ? 'pom-moe' : 'paimon-moe'}`}
+                  </p>
                 </label>
+              </div>
+              
+              {/* Instructions for JSON files */}
+              <div className={`mt-4 p-4 rounded-lg border ${
+                selectedGame === 'HSR' 
+                  ? 'bg-hsr-gold/20 border-hsr-gold/30' 
+                  : 'bg-blue-500/20 border-blue-500/30'
+              }`}>
+                <h4 className={`text-lg font-semibold mb-2 ${
+                  selectedGame === 'HSR' ? 'text-hsr-gold' : 'text-blue-300'
+                }`}>
+                  📋 Как получить JSON файл для {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'}:
+                </h4>
+                <ol className={`text-sm space-y-1 ${
+                  selectedGame === 'HSR' ? 'text-yellow-200' : 'text-blue-200'
+                }`}>
+                  <li>1. Установите расширение {selectedGame === 'HSR' ? 'pom-moe' : 'paimon-moe'} для браузера</li>
+                  <li>2. Откройте игру и зайдите в историю круток</li>
+                  <li>3. Используйте расширение для экспорта данных в JSON</li>
+                  <li>4. Сохраните файл и загрузите его здесь</li>
+                  <li>5. Нажмите "Загрузить данные"</li>
+                </ol>
+                <p className={`text-xs mt-2 ${
+                  selectedGame === 'HSR' ? 'text-yellow-300' : 'text-blue-300'
+                }`}>
+                  💡 UID определяется автоматически из вашей учетной записи
+                </p>
               </div>
             </div>
           )}
@@ -225,7 +280,7 @@ const Upload = () => {
           {/* Upload Button */}
           <button
             onClick={handleUpload}
-            disabled={isLoading || (!url && selectedMethod === 'url')}
+            disabled={isLoading || (selectedMethod === 'url' && !url) || (selectedMethod === 'file' && !selectedFile)}
             className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             {isLoading ? (
@@ -242,43 +297,97 @@ const Upload = () => {
         {/* Instructions */}
         <div className="card mt-6">
           <h3 className="text-lg font-semibold text-white mb-4">
-            Инструкция по получению ссылки ({selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'})
+            Инструкция по загрузке данных ({selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'})
           </h3>
-          <ol className="list-decimal list-inside space-y-2 text-gray-300 mb-6">
-            <li>Откройте игру {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'} и зайдите в историю круток</li>
-            <li>Закройте игру полностью</li>
-            <li>Откройте PowerShell от имени администратора</li>
-            <li>Выполните команду ниже</li>
-            <li>Скопируйте полученную ссылку в поле выше</li>
-            <li>Нажмите "Загрузить данные" (UID определяется автоматически)</li>
-          </ol>
           
-          {/* PowerShell Command */}
-          <div className="mb-4">
-            <h4 className="text-md font-semibold text-white mb-2">PowerShell команда:</h4>
-            <div className="bg-black/60 rounded-lg p-4 font-mono text-sm overflow-x-auto border border-hsr-gold/30">
-              <code className="text-green-400">
-                {selectedGame === 'HSR' 
-                  ? `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/hsr_getlink.ps1'))}"` 
-                  : `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/get-genshin-url.ps1'))}"`
-                }
-              </code>
+          {/* URL Method Instructions */}
+          {selectedMethod === 'url' && (
+            <div className="mb-6">
+              <h4 className="text-md font-semibold text-white mb-2">Через URL (рекомендуется):</h4>
+              <ol className="list-decimal list-inside space-y-2 text-gray-300 mb-4">
+                <li>Откройте игру {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'} и зайдите в историю круток</li>
+                <li>Закройте игру полностью</li>
+                <li>Откройте PowerShell от имени администратора</li>
+                <li>Выполните команду ниже</li>
+                <li>Скопируйте полученную ссылку в поле выше</li>
+                <li>Нажмите "Загрузить данные" (UID определяется автоматически)</li>
+              </ol>
+              
+              {/* PowerShell Command */}
+              <div className="mb-4">
+                <h4 className="text-md font-semibold text-white mb-2">PowerShell команда:</h4>
+                <div className="bg-black/60 rounded-lg p-4 font-mono text-sm overflow-x-auto border border-hsr-gold/30">
+                  <code className="text-green-400">
+                    {selectedGame === 'HSR' 
+                      ? `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/hsr_getlink.ps1'))}"` 
+                      : `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/get-genshin-url.ps1'))}"`
+                    }
+                  </code>
+                </div>
+                <div className="flex items-center mt-2 space-x-2">
+                  <button
+                    onClick={() => {
+                      const command = selectedGame === 'HSR' 
+                        ? `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/hsr_getlink.ps1'))}"` 
+                        : `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/get-genshin-url.ps1'))}"`;
+                      navigator.clipboard.writeText(command);
+                    }}
+                    className="text-sm bg-hsr-gold/20 hover:bg-hsr-gold/30 text-hsr-gold px-3 py-1 rounded transition-colors"
+                  >
+                    📋 Копировать команду
+                  </button>
+                  <span className="text-gray-400 text-xs">Команда скопируется в буфер обмена</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center mt-2 space-x-2">
-              <button
-                onClick={() => {
-                  const command = selectedGame === 'HSR' 
-                    ? `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/hsr_getlink.ps1'))}"` 
-                    : `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/get-genshin-url.ps1'))}"`;
-                  navigator.clipboard.writeText(command);
-                }}
-                className="text-sm bg-hsr-gold/20 hover:bg-hsr-gold/30 text-hsr-gold px-3 py-1 rounded transition-colors"
-              >
-                📋 Копировать команду
-              </button>
-              <span className="text-gray-400 text-xs">Команда скопируется в буфер обмена</span>
+          )}
+
+          {/* JSON Method Instructions */}
+          {selectedMethod === 'file' && (
+            <div className="mb-6">
+              <h4 className="text-md font-semibold text-white mb-2">Через JSON файл (альтернативный способ):</h4>
+              <ol className="list-decimal list-inside space-y-2 text-gray-300 mb-4">
+                <li>Установите расширение {selectedGame === 'HSR' ? 'pom-moe' : 'paimon-moe'} для браузера</li>
+                <li>Откройте игру и зайдите в историю круток</li>
+                <li>Используйте расширение для экспорта данных в JSON формат</li>
+                <li>Сохраните JSON файл на вашем устройстве</li>
+                <li>Выберите файл выше и нажмите "Загрузить данные"</li>
+              </ol>
+              
+              <div className={`p-4 rounded-lg border ${
+                selectedGame === 'HSR' 
+                  ? 'bg-hsr-gold/20 border-hsr-gold/30' 
+                  : 'bg-blue-500/20 border-blue-500/30'
+              }`}>
+                <h4 className={`font-semibold mb-2 ${
+                  selectedGame === 'HSR' ? 'text-hsr-gold' : 'text-blue-300'
+                }`}>
+                  🔗 Ссылки на расширения:
+                </h4>
+                <div className="space-y-1 text-sm">
+                  {selectedGame === 'HSR' ? (
+                    <a 
+                      href="https://chromewebstore.google.com/detail/pom-moe-honkai-star-rail-w/cgdkodmlhlpenicfgkmpgkegljpnkgdo" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-yellow-300 hover:text-yellow-200 underline"
+                    >
+                      pom-moe для Honkai Star Rail (Chrome Web Store)
+                    </a>
+                  ) : (
+                    <a 
+                      href="https://chromewebstore.google.com/detail/paimon-moe-genshin-impact/fgmekcjiknkhpkhhljonlbmnpkdgjpkd" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-300 hover:text-blue-200 underline"
+                    >
+                      paimon-moe для Genshin Impact (Chrome Web Store)
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Game-specific tips */}
           {selectedGame === 'GENSHIN' && (

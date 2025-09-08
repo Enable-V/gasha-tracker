@@ -1,8 +1,27 @@
 import { Router, Request, Response } from 'express'
+import multer from 'multer'
 import { genshinImportService } from '../services/genshinImportService'
-import { authenticateToken } from '../middleware/auth'
+import { authenticateToken, requireOwnership } from '../middleware/auth'
+import { PrismaClient } from '@prisma/client'
 
 const router = Router()
+const prisma = new PrismaClient()
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage()
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/json') {
+      cb(null, true)
+    } else {
+      cb(new Error('Only JSON files are allowed'))
+    }
+  }
+})
 
 // Импорт данных Genshin Impact
 router.post('/import/:uid', authenticateToken, async (req: Request, res: Response) => {
@@ -15,11 +34,14 @@ router.post('/import/:uid', authenticateToken, async (req: Request, res: Respons
       return res.status(403).json({ error: 'Access denied' })
     }
 
+    console.log(`🌐 Starting Genshin URL import for UID: ${uid}`)
+    console.log(`🔗 URL: ${gachaUrl.substring(0, 50)}...`)
+
     if (!gachaUrl) {
       return res.status(400).json({ error: 'Genshin Impact gacha URL is required' })
     }
 
-    console.log(`Starting Genshin import for UID: ${uid}`)
+    console.log(`🚀 Starting Genshin data import process...`)
     const result = await genshinImportService.importGenshinData(gachaUrl, uid)
 
     if (result.success) {
@@ -82,5 +104,409 @@ router.post('/get-url', authenticateToken, async (req: Request, res: Response) =
     res.status(500).json({ error: 'Failed to get Genshin URL' })
   }
 })
+
+// Очистка всех круток Genshin Impact для пользователя
+router.delete('/clear-pulls/:uid', authenticateToken, requireOwnership, async (req: Request, res: Response) => {
+  try {
+    const { uid } = req.params
+
+    // Проверяем, что пользователь запрашивает свою статистику
+    if (req.user?.uid !== uid) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const user = req.user!
+
+    // Удаляем все крутки Genshin для пользователя
+    const deleteResult = await prisma.gachaPull.deleteMany({
+      where: {
+        userId: user.id,
+        game: 'GENSHIN'
+      }
+    })
+
+    // Также удаляем связанные UserStats для Genshin
+    await prisma.userStats.deleteMany({
+      where: {
+        userId: user.id,
+        game: 'GENSHIN'
+      }
+    })
+
+    console.log(`Cleared ${deleteResult.count} Genshin pulls for user ${uid}`)
+    res.json({
+      message: `Successfully cleared ${deleteResult.count} Genshin Impact pulls`,
+      deletedCount: deleteResult.count
+    })
+
+  } catch (error: any) {
+    console.error('Error clearing Genshin pulls:', error)
+    res.status(500).json({ error: 'Failed to clear Genshin pulls' })
+  }
+})
+
+// Импорт данных Genshin Impact из JSON файла (paimon-moe формат)
+router.post('/import/json/:uid', authenticateToken, requireOwnership, upload.single('gachaFile'), async (req: Request, res: Response) => {
+  try {
+    const { uid } = req.params
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+
+    // Проверяем, что пользователь импортирует свои данные
+    if (req.user?.uid !== uid) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const user = req.user!
+
+    let jsonData
+    try {
+      jsonData = JSON.parse(req.file.buffer.toString())
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid JSON format' })
+    }
+
+    console.log(`📁 Processing paimon-moe Genshin JSON file for UID: ${uid}`)
+    console.log(`🔍 Detected paimon-moe format, starting data conversion...`)
+
+    // Проверяем формат файла
+    if (!isPaimonMoeFormat(jsonData)) {
+      return res.status(400).json({ error: 'Invalid paimon-moe format. Please upload a valid paimon-moe JSON file.' })
+    }
+
+    console.log(`🚀 Processing paimon-moe JSON data for UID: ${uid}`)
+
+    // Обрабатываем данные в формате paimon-moe
+    const result = await processPaimonMoeData(prisma, user.id, jsonData)
+
+    res.json(result)
+
+  } catch (error: any) {
+    console.error('Error importing Genshin JSON data:', error)
+    res.status(500).json({ error: 'Failed to import Genshin JSON data' })
+  }
+})
+
+// Функция для определения формата paimon-moe
+function isPaimonMoeFormat(data: any): boolean {
+  console.log(`🔍 Checking paimon-moe format detection...`);
+  console.log(`📊 Data type: ${typeof data}`);
+  console.log(`🔑 Available keys: ${Object.keys(data || {}).join(', ')}`);
+
+  // paimon-moe format has specific structure with different banner types
+  // Support both old and new paimon-moe formats
+  const hasOldFormat = data && typeof data === 'object' && (
+    data['wish-counter-character-event'] ||
+    data['wish-counter-chronicled'] ||
+    data['wish-counter-standard'] ||
+    data['wish-counter-weapon-event']
+  );
+
+  // Check for new format with 'default' wrapper
+  const hasNewFormatWrapper = data && typeof data === 'object' && data['default'] && typeof data['default'] === 'object';
+  const innerData = hasNewFormatWrapper ? data['default'] : data;
+
+  const hasNewFormat = innerData && typeof innerData === 'object' && (
+    innerData['character'] ||
+    innerData['lightcone'] ||
+    innerData['standard'] ||
+    innerData['beginner']
+  );
+
+  console.log(`📋 Old format detected: ${hasOldFormat}`);
+  console.log(`📋 New format wrapper detected: ${hasNewFormatWrapper}`);
+  console.log(`📋 New format detected: ${hasNewFormat}`);
+
+  if (hasNewFormatWrapper) {
+    console.log(`📦 Data wrapped in 'default' key, inner keys: ${Object.keys(innerData).join(', ')}`);
+  }
+
+  const result = hasOldFormat || hasNewFormat;
+  console.log(`✅ Final result: ${result}`);
+
+  return result;
+}
+
+// Функция для обработки данных в формате paimon-moe
+async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonData: any) {
+  let importedCount = 0
+  let skippedCount = 0
+  let errorCount = 0
+
+  // Check if data is wrapped in 'default' key
+  const actualData = jsonData['default'] || jsonData;
+  console.log(`📦 Processing data ${jsonData['default'] ? 'from' : 'without'} 'default' wrapper`);
+
+  // Извлекаем все крутки из разных типов баннеров
+  const allPulls: any[] = []
+
+  // Маппинг типов баннеров paimon-moe к стандартным
+  const bannerTypeMapping: { [key: string]: { bannerId: string, bannerName: string, bannerType: string } } = {
+    // Old format keys
+    'wish-counter-character-event': { bannerId: 'genshin_301', bannerName: 'Character Event Wish', bannerType: 'character' },
+    'wish-counter-chronicled': { bannerId: 'genshin_400', bannerName: 'Chronicled Wish', bannerType: 'chronicled' },
+    'wish-counter-standard': { bannerId: 'genshin_200', bannerName: 'Wanderlust Invocation', bannerType: 'standard' },
+    'wish-counter-weapon-event': { bannerId: 'genshin_302', bannerName: 'Weapon Event Wish', bannerType: 'weapon' },
+    // New format keys
+    'character': { bannerId: 'genshin_301', bannerName: 'Character Event Wish', bannerType: 'character' },
+    'lightcone': { bannerId: 'genshin_302', bannerName: 'Weapon Event Wish', bannerType: 'weapon' },
+    'standard': { bannerId: 'genshin_200', bannerName: 'Wanderlust Invocation', bannerType: 'standard' },
+    'beginner': { bannerId: 'genshin_100', bannerName: 'Beginners\' Wish', bannerType: 'beginner' }
+  }
+
+  // Обрабатываем каждый тип баннера
+  for (const [bannerKey, bannerInfo] of Object.entries(bannerTypeMapping)) {
+    let pulls = [];
+
+    // Check both old format (direct) and new format (in actualData)
+    if (actualData[bannerKey]?.pulls) {
+      pulls = actualData[bannerKey].pulls;
+    } else if (Array.isArray(actualData[bannerKey])) {
+      pulls = actualData[bannerKey];
+    }
+
+    if (pulls.length > 0) {
+      console.log(`📋 Processing ${pulls.length} pulls from banner: ${bannerKey}`);
+      
+      // Log first pull structure for debugging
+      if (pulls.length > 0) {
+        console.log(`🔍 First pull structure:`, JSON.stringify(pulls[0], null, 2));
+      }
+
+      for (const pull of pulls) {
+        // Преобразуем данные paimon-moe в стандартный формат
+        const itemName = pull.id || 'Unknown Item';
+        const itemType = pull.type === 'character' ? 'Персонажи' : 'Оружие';
+        
+        // Определяем rankType: если есть rate=1 или pity высокий, то 5*, иначе 4* или 3*
+        let rankType = 3; // default to 3*
+        if (pull.rate === 1 || pull.pity >= 70) {
+          rankType = 5;
+        } else if (pull.pity >= 8) {
+          rankType = 4;
+        }
+        
+        const standardPull = {
+          id: `genshin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          gacha_type: bannerInfo.bannerId, // Всегда используем новый маппинг
+          name: itemName,
+          item_type: itemType,
+          rank_type: rankType,
+          time: pull.time,
+          banner_name: bannerInfo.bannerName,
+          banner_type: bannerInfo.bannerType,
+          game: 'GENSHIN'
+        }
+
+        allPulls.push(standardPull)
+      }
+    }
+  }
+
+  // Сортируем по времени
+  allPulls.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
+
+  console.log(`📊 Total pulls collected: ${allPulls.length}`);
+
+  // Обрабатываем каждую крутку
+  const totalPulls = allPulls.length;
+  console.log(`📊 Starting Genshin import: ${totalPulls} pulls to process`);
+
+  for (let i = 0; i < allPulls.length; i++) {
+    const pull = allPulls[i];
+
+    // Log progress every 10% or every 100 pulls
+    if (i % Math.max(1, Math.floor(totalPulls / 10)) === 0 || i % 100 === 0) {
+      const progress = ((i / totalPulls) * 100).toFixed(1);
+      console.log(`🔄 Genshin Import Progress: ${i}/${totalPulls} pulls (${progress}%) - Imported: ${importedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+    }
+
+    try {
+      // Validate required fields
+      if (!pull.name || pull.name.trim() === '') {
+        console.warn(`⚠️ Skipping pull with empty name: ${JSON.stringify(pull)}`);
+        skippedCount++;
+        continue;
+      }
+
+      if (!pull.time) {
+        console.warn(`⚠️ Skipping pull with invalid time: ${JSON.stringify(pull)}`);
+        skippedCount++;
+        continue;
+      }
+
+      console.log(`🔍 Processing pull: ${pull.name} at ${pull.time}`);
+      console.log(`📊 Using banner: ${pull.gacha_type} (${pull.banner_name})`);
+
+      // Проверяем, существует ли уже эта крутка (более точная проверка дубликатов)
+      const existingPull = await prisma.gachaPull.findFirst({
+        where: {
+          itemName: pull.name,
+          time: new Date(pull.time),
+          bannerId: pull.gacha_type,
+          userId: userId,
+          game: 'GENSHIN'
+        }
+      })
+
+      if (existingPull) {
+        console.log(`⏭️ Skipping existing pull: ${pull.name} at ${pull.time} (duplicate found)`);
+        skippedCount++
+        continue
+      }
+
+      console.log(`✅ Pull ${pull.name} at ${pull.time} passed validation, proceeding with import`);
+
+      // Убеждаемся, что баннер существует
+      let banner = await prisma.banner.findUnique({
+        where: { 
+          bannerId_game: {
+            bannerId: pull.gacha_type,
+            game: 'GENSHIN'
+          }
+        }
+      })
+
+      if (!banner) {
+        console.log(`📝 Creating banner: ${pull.gacha_type} (${pull.banner_name})`);
+        banner = await prisma.banner.create({
+          data: {
+            bannerId: pull.gacha_type,
+            bannerName: pull.banner_name,
+            bannerType: pull.banner_type,
+            game: 'GENSHIN'
+          }
+        })
+        console.log(`✅ Banner created successfully`);
+      } else {
+        console.log(`📋 Using existing banner: ${pull.gacha_type}`);
+      }
+
+      // Вычисляем pity count
+      const previousPulls = await prisma.gachaPull.findMany({
+        where: {
+          userId,
+          bannerId: pull.gacha_type,
+          game: 'GENSHIN',
+          time: { lt: new Date(pull.time) }
+        },
+        orderBy: { time: 'desc' }
+      })
+
+      let pityCount = 1
+      for (const prevPull of previousPulls) {
+        if (prevPull.rankType === 5) break
+        pityCount++
+      }
+
+      // Создаем запись крутки
+      await prisma.gachaPull.create({
+        data: {
+          userId,
+          bannerId: pull.gacha_type,
+          gachaId: pull.id, // Используем уникальный ID
+          itemName: pull.name,
+          itemType: pull.item_type,
+          rankType: pull.rank_type,
+          time: new Date(pull.time),
+          pityCount,
+          game: 'GENSHIN',
+          isFeatured: pull.rate === 1 // 5* предметы считаем featured
+        }
+      })
+
+      console.log(`✅ Successfully imported pull: ${pull.name} at ${pull.time}`);
+      importedCount++
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        console.log(`⏭️ Skipping duplicate pull: ${pull.name} at ${pull.time} - ${error.message}`);
+        skippedCount++;
+      } else {
+        console.error(`❌ Error processing Genshin pull ${pull.name} at ${pull.time}:`, error.message);
+        console.error(`   Pull data:`, JSON.stringify(pull));
+        errorCount++;
+      }
+    }
+  }
+
+  // Final progress log
+  console.log(`✅ Genshin Import Complete: ${totalPulls} pulls processed - Imported: ${importedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+
+  // Обновляем статистику пользователя
+  await updateGenshinUserStats(prisma, userId)
+
+  return {
+    message: 'Genshin Impact data from paimon-moe processed successfully',
+    imported: importedCount,
+    skipped: skippedCount,
+    errors: errorCount,
+    total: allPulls.length
+  }
+}
+
+// Функция для обновления статистики Genshin Impact
+async function updateGenshinUserStats(prisma: PrismaClient, userId: number) {
+  const bannerTypes: (keyof typeof import('@prisma/client').BannerType)[] = ['character', 'weapon', 'standard', 'chronicled']
+
+  for (const bannerType of bannerTypes) {
+    const pulls = await prisma.gachaPull.findMany({
+      where: {
+        userId,
+        game: 'GENSHIN',
+        banner: {
+          bannerType
+        }
+      },
+      orderBy: { time: 'desc' }
+    })
+
+    const totalPulls = pulls.length
+    const fiveStarCount = pulls.filter((p: any) => p.rankType === 5).length
+    const fourStarCount = pulls.filter((p: any) => p.rankType === 4).length
+    const threeStarCount = pulls.filter((p: any) => p.rankType === 3).length
+
+    let currentPity = 0
+    let lastFiveStarTime = null
+
+    for (const pull of pulls) {
+      if (pull.rankType === 5) {
+        lastFiveStarTime = pull.time
+        break
+      }
+      currentPity++
+    }
+
+    await prisma.userStats.upsert({
+      where: {
+        unique_user_banner_game: {
+          userId,
+          bannerType: bannerType as string,
+          game: 'GENSHIN'
+        }
+      },
+      update: {
+        totalPulls,
+        fiveStarCount,
+        fourStarCount,
+        threeStarCount,
+        currentPity,
+        lastFiveStarTime
+      },
+      create: {
+        userId,
+        bannerType: bannerType as string,
+        game: 'GENSHIN',
+        totalPulls,
+        fiveStarCount,
+        fourStarCount,
+        threeStarCount,
+        currentPity,
+        lastFiveStarTime
+      }
+    })
+  }
+}
 
 export default router

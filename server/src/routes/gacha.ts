@@ -273,4 +273,45 @@ async function updateUserStats(prisma: any, userId: number) {
   }
 }
 
+// Clear all HSR pulls for a user (требует аутентификации и владения)
+router.delete('/clear-pulls/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
+  try {
+    const { uid } = req.params;
+    
+    const user = await prisma.user.findUnique({
+      where: { uid }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Удаляем все HSR крутки пользователя
+    const deletedPulls = await prisma.gachaPull.deleteMany({
+      where: {
+        userId: user.id,
+        game: 'HSR'
+      }
+    });
+    
+    // Удаляем соответствующие статистики HSR
+    await prisma.userStats.deleteMany({
+      where: {
+        userId: user.id,
+        game: 'HSR'
+      }
+    });
+    
+    console.log(`Cleared ${deletedPulls.count} HSR pulls for user ${user.username} (${uid})`);
+    
+    res.json({
+      message: 'HSR pulls cleared successfully',
+      deletedCount: deletedPulls.count
+    });
+  } catch (error) {
+    console.error('Error clearing HSR pulls:', error);
+    res.status(500).json({ error: 'Failed to clear HSR pulls' });
+  }
+});
+
 export default router;
