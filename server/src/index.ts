@@ -8,6 +8,7 @@ import { createLogger, format, transports } from 'winston';
 
 import userRoutes from './routes/users.js';
 import gachaRoutes from './routes/gacha.js';
+import genshinRoutes from './routes/genshin.js';
 import statsRoutes from './routes/stats.js';
 import uploadRoutes from './routes/upload.js';
 import testRoutes from './routes/test.js';
@@ -68,6 +69,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/gacha', gachaRoutes);
+app.use('/api/genshin', genshinRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/test', testRoutes);

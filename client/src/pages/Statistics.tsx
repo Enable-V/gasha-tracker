@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 
+type GameType = 'HSR' | 'GENSHIN'
+
 interface UserStats {
   user: {
     uid: string
@@ -46,6 +48,7 @@ interface BannerDetail {
 
 const Statistics = () => {
   const { user } = useAuth()
+  const [selectedGame, setSelectedGame] = useState<GameType>('HSR')
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [selectedBanner, setSelectedBanner] = useState<string | null>(null)
   const [bannerDetail, setBannerDetail] = useState<BannerDetail | null>(null)

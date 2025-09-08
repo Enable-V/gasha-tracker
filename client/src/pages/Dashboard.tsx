@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 
+type GameType = 'HSR' | 'GENSHIN'
+
 const Dashboard = () => {
   const { user } = useAuth()
+  const [selectedGame, setSelectedGame] = useState<GameType>('HSR')
   const [gachaData, setGachaData] = useState<any>(null)
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(false)
@@ -13,20 +16,27 @@ const Dashboard = () => {
     if (user?.uid) {
       loadUserData(user.uid)
     }
-  }, [user])
+  }, [user, selectedGame])
 
   const loadUserData = async (uid: string) => {
     if (!uid) return
     
     setLoading(true)
     try {
-      const [gachaResponse, statsResponse] = await Promise.all([
-        axios.get(`/api/gacha/user/${uid}?limit=1000`),
-        axios.get(`/api/gacha/stats/${uid}`)
-      ])
-      
-      setGachaData(gachaResponse.data)
-      setStats(statsResponse.data)
+      if (selectedGame === 'HSR') {
+        const [gachaResponse, statsResponse] = await Promise.all([
+          axios.get(`/api/gacha/user/${uid}?limit=1000`),
+          axios.get(`/api/gacha/stats/${uid}`)
+        ])
+        
+        setGachaData(gachaResponse.data)
+        setStats(statsResponse.data)
+      } else {
+        // Для Genshin Impact
+        const statsResponse = await axios.get(`/api/genshin/stats/${uid}`)
+        setStats(statsResponse.data)
+        setGachaData(null) // Пока не реализовано детальное получение данных
+      }
     } catch (error) {
       console.error('Error loading user data:', error)
       setGachaData(null)
@@ -214,6 +224,42 @@ const Dashboard = () => {
           <p className="text-hsr-gold text-sm">
             👤 <span className="font-bold">{user?.username}</span> (UID: {user?.uid})
           </p>
+        </div>
+      </div>
+
+      {/* Game Selector */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-white mb-4">Выберите игру:</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => setSelectedGame('HSR')}
+            className={`p-4 rounded-lg border-2 transition-all ${
+              selectedGame === 'HSR'
+                ? 'border-hsr-gold bg-hsr-gold/20 text-white'
+                : 'border-white/20 bg-white/5 text-gray-300 hover:border-white/40'
+            }`}
+          >
+            <div className="text-center">
+              <div className="text-3xl mb-2">⭐</div>
+              <div className="font-semibold">Honkai Star Rail</div>
+              <div className="text-sm opacity-75 mt-1">HSR</div>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => setSelectedGame('GENSHIN')}
+            className={`p-4 rounded-lg border-2 transition-all ${
+              selectedGame === 'GENSHIN'
+                ? 'border-blue-500 bg-blue-500/20 text-white'
+                : 'border-white/20 bg-white/5 text-gray-300 hover:border-white/40'
+            }`}
+          >
+            <div className="text-center">
+              <div className="text-3xl mb-2">🌟</div>
+              <div className="font-semibold">Genshin Impact</div>
+              <div className="text-sm opacity-75 mt-1">原神</div>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -465,8 +511,12 @@ const Dashboard = () => {
         <div className="card text-center">
           <div className="text-gray-400">
             <div className="text-6xl mb-4">📭</div>
-            <p className="text-lg">Нет данных gacha для вашего аккаунта</p>
-            <p className="text-sm mt-2">Импортируйте историю круток через страницу "Загрузка данных"</p>
+            <p className="text-lg">
+              Нет данных {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'} для вашего аккаунта
+            </p>
+            <p className="text-sm mt-2">
+              Импортируйте историю круток через страницу "Загрузка данных" → {selectedGame === 'HSR' ? 'HSR' : 'Genshin Impact'}
+            </p>
           </div>
         </div>
       )}

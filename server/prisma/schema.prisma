@@ -31,12 +31,14 @@ model Banner {
   bannerId    String   @unique @map("banner_id") @db.VarChar(20)
   bannerName  String   @map("banner_name") @db.VarChar(100)
   bannerType  BannerType @map("banner_type")
+  game        GameType @default(HSR)
   startTime   DateTime? @map("start_time")
   endTime     DateTime? @map("end_time")
   createdAt   DateTime @default(now()) @map("created_at")
   
   gachaPulls  GachaPull[]
   
+  @@unique([bannerId, game])
   @@map("banners")
 }
 
@@ -51,14 +53,16 @@ model GachaPull {
   time        DateTime
   pityCount   Int      @default(0) @map("pity_count")
   isFeatured  Boolean  @default(false) @map("is_featured")
+  game        GameType @default(HSR)
   createdAt   DateTime @default(now()) @map("created_at")
   
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  banner      Banner   @relation(fields: [bannerId], references: [bannerId])
+  banner      Banner   @relation(fields: [bannerId, game], references: [bannerId, game])
   
-  @@index([userId, bannerId])
+  @@index([userId, bannerId, game])
   @@index([time])
   @@index([rankType])
+  @@index([game])
   @@map("gacha_pulls")
 }
 
@@ -66,6 +70,7 @@ model UserStats {
   id                Int      @id @default(autoincrement())
   userId            Int      @map("user_id")
   bannerType        String   @map("banner_type") @db.VarChar(20)
+  game              GameType @default(HSR)
   totalPulls        Int      @default(0) @map("total_pulls")
   fiveStarCount     Int      @default(0) @map("five_star_count")
   fourStarCount     Int      @default(0) @map("four_star_count")
@@ -76,8 +81,13 @@ model UserStats {
   
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  @@unique([userId, bannerType], name: "unique_user_banner")
+  @@unique([userId, bannerType, game], name: "unique_user_banner_game")
   @@map("user_stats")
+}
+
+enum GameType {
+  HSR
+  GENSHIN
 }
 
 enum BannerType {
@@ -85,4 +95,5 @@ enum BannerType {
   weapon
   standard
   beginner
+  chronicled
 }
