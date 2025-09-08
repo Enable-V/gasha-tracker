@@ -11,9 +11,9 @@ const prisma = new PrismaClient()
 router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.params;
-    const { banner, limit = 50, offset = 0 } = req.query;
+    const { banner, limit = 50, offset = 0, game } = req.query;
     
-    console.log(`Fetching gacha pulls for UID: ${uid}`);
+    console.log(`Fetching gacha pulls for UID: ${uid}, Game: ${game || 'HSR'}`);
     
     const user = await prisma.user.findUnique({
       where: { uid }
@@ -26,7 +26,12 @@ router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: Aut
     
     console.log(`Found user: ${user.id} (${user.username})`);
     
-    const whereClause: any = { userId: user.id };
+    const whereClause: any = { 
+      userId: user.id,
+      // Добавляем фильтр по игре, по умолчанию HSR для обратной совместимости
+      game: game ? (game as string).toUpperCase() : 'HSR'
+    };
+    
     if (banner) {
       whereClause.bannerId = banner;
     }
@@ -79,6 +84,7 @@ router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: Aut
 router.get('/stats/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
   try {
     const { uid } = req.params;
+    const { game } = req.query;
     
     const user = await prisma.user.findUnique({
       where: { uid }
@@ -88,15 +94,21 @@ router.get('/stats/:uid', authenticateOptional, requireOwnership, async (req: Au
       return res.status(404).json({ error: 'User not found' });
     }
     
+    const gameFilter = game ? (game as string).toUpperCase() : 'HSR';
+    
     const stats = await prisma.userStats.findMany({
-      where: { userId: user.id }
+      where: { 
+        userId: user.id,
+        game: gameFilter as any
+      }
     });
     
     // Get recent 5-star pulls
     const recentFiveStars = await prisma.gachaPull.findMany({
       where: {
         userId: user.id,
-        rankType: 5
+        rankType: 5,
+        game: gameFilter as any
       },
       include: {
         banner: true

@@ -100,18 +100,26 @@ export class GenshinImportService {
     params: any, 
     gachaType: string, 
     page: number = 1, 
-    size: number = 20
+    size: number = 20,
+    endId: string = '0'
   ): Promise<GenshinGachaItem[]> {
     try {
       const url = `https://${params.host}/gacha_info/api/getGachaLog`
       
+      const requestParams = {
+        ...params,
+        gacha_type: gachaType,
+        page: page.toString(),
+        size: size.toString()
+      }
+
+      // Добавляем end_id если он не равен '0'
+      if (endId !== '0') {
+        requestParams.end_id = endId
+      }
+
       const response = await axios.get<GenshinGachaResponse>(url, {
-        params: {
-          ...params,
-          gacha_type: gachaType,
-          page: page.toString(),
-          size: size.toString()
-        },
+        params: requestParams,
         timeout: 30000,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -167,15 +175,22 @@ export class GenshinImportService {
           let page = 1
           let hasMore = true
           let bannerImported = 0
+          let endId = '0'
 
           while (hasMore) {
             console.log(`📄 Fetching page ${page} for ${bannerInfo.name}...`)
             
-            const items = await this.fetchGachaData(url, params, gachaType, page, 20)
+            const items = await this.fetchGachaData(url, params, gachaType, page, 20, endId)
             
             if (items.length === 0) {
+              console.log(`[0] Reached page limit for ${bannerInfo.name}`)
               hasMore = false
               break
+            }
+
+            // Если получили меньше 20 элементов, это последняя страница
+            if (items.length < 20) {
+              hasMore = false
             }
 
             for (const item of items) {
@@ -213,6 +228,11 @@ export class GenshinImportService {
                 console.error(`Error importing item ${item.id}:`, error.message)
                 continue
               }
+            }
+
+            // Обновляем endId для следующего запроса (используем ID последней записи)
+            if (items.length > 0) {
+              endId = items[items.length - 1].id
             }
 
             page++
@@ -266,15 +286,63 @@ export class GenshinImportService {
         throw new Error('User not found')
       }
 
-      const stats = await prisma.gachaPull.groupBy({
-        by: ['bannerId', 'rankType'],
-        _count: true,
+      console.log('Fetching gacha pulls for UID:', uid)
+      console.log('Found user:', user.id, `(${user.uid})`)
+      console.log('Searching with where clause:', { userId: user.id })
+
+      // Получаем все крутки пользователя для Genshin Impact
+      const pulls = await prisma.gachaPull.findMany({
         where: {
           userId: user.id,
           game: 'GENSHIN'
-        }
+        },
+        include: {
+          banner: true
+        },
+        orderBy: { time: 'desc' }
       })
 
+      console.log('Found', pulls.length, 'pulls')
+      console.log('Total pulls count:', pulls.length)
+
+      // Группируем статистику
+      const stats = pulls.reduce((acc: any, pull) => {
+        const key = `${pull.bannerId}_${pull.rankType}`
+        if (!acc[key]) {
+          acc[key] = {
+            bannerId: pull.bannerId,
+            rankType: pull.rankType,
+            _count: 0
+          }
+        }
+        acc[key]._count++
+        return acc
+      }, {})
+
+      // Получаем последние 5-звездочные крутки
+      const recentFiveStars = await prisma.gachaPull.findMany({
+        where: {
+          userId: user.id,
+          rankType: 5,
+          game: 'GENSHIN'
+        },
+        include: {
+          banner: true
+        },
+        orderBy: {
+          time: 'desc'
+        },
+        take: 10
+      })
+
+      // Преобразуем BigInt в строку для JSON сериализации
+      const serializedFiveStars = recentFiveStars.map((pull: any) => ({
+        ...pull,
+        id: pull.id.toString(),
+        time: pull.time.toISOString()
+      }))
+
+      // Получаем информацию о баннерах
       const banners = await prisma.banner.findMany({
         where: { game: 'GENSHIN' },
         include: {
@@ -286,13 +354,37 @@ export class GenshinImportService {
         }
       })
 
+      // Конвертируем результат в JSON-безопасный формат
+      const jsonSafeBanners = banners.map(banner => ({
+        id: Number(banner.id),
+        bannerId: banner.bannerId,
+        bannerName: banner.bannerName,
+        bannerType: banner.bannerType,
+        game: banner.game,
+        createdAt: banner.createdAt,
+        gachaPulls: banner.gachaPulls.map(pull => ({
+          id: Number(pull.id),
+          userId: Number(pull.userId),
+          bannerId: pull.bannerId,
+          gachaId: pull.gachaId,
+          itemName: pull.itemName,
+          itemType: pull.itemType,
+          rankType: pull.rankType,
+          time: pull.time,
+          game: pull.game,
+          createdAt: pull.createdAt
+        }))
+      }))
+
       return {
         user: {
           uid: user.uid,
           username: user.username
         },
-        stats,
-        banners
+        stats: Object.values(stats),
+        banners: jsonSafeBanners,
+        totalPulls: pulls.length,
+        recentFiveStars: serializedFiveStars
       }
 
     } catch (error: any) {

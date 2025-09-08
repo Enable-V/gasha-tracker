@@ -17,7 +17,7 @@ function Get-HSRGachaURL {
         $tempScript = [System.IO.Path]::GetTempFileName() + ".ps1"
         
         # Загружаем скрипт
-        $scriptContent = (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/hsr_getlink.ps1')
+        $scriptContent = (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/hsr_getlink.ps1')
         Set-Content -Path $tempScript -Value $scriptContent -Encoding UTF8
         
         # Выполняем скрипт и захватываем вывод
@@ -122,7 +122,7 @@ if ($gachaURL) {
     Write-Host ""
     Write-Host "Не удалось получить HSR URL автоматически" -ForegroundColor Red
     Write-Host "Попробуйте запустить команду вручную в PowerShell:" -ForegroundColor Yellow
-    Write-Host 'Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString(`"https://raw.githubusercontent.com/Enable-V/honkai/main/hsr_getlink.ps1`"))}"' -ForegroundColor Cyan
+    Write-Host 'Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString(`"https://raw.githubusercontent.com/Enable-V/honkai/main/scripts/hsr_getlink.ps1`"))}"' -ForegroundColor Cyan
 }
 
 Write-Host ""

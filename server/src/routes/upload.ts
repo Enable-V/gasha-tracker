@@ -361,9 +361,10 @@ async function updateUserStats(prisma: any, userId: number) {
     
     await prisma.userStats.upsert({
       where: {
-        unique_user_banner: {
+        unique_user_banner_game: {
           userId,
-          bannerType
+          bannerType,
+          game: 'HSR'
         }
       },
       update: {
@@ -377,6 +378,7 @@ async function updateUserStats(prisma: any, userId: number) {
       create: {
         userId,
         bannerType,
+        game: 'HSR',
         totalPulls,
         fiveStarCount,
         fourStarCount,

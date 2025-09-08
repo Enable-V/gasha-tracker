@@ -4,13 +4,47 @@ import axios from 'axios'
 
 type GameType = 'HSR' | 'GENSHIN'
 
+// Функция перевода названий баннеров
+const translateBannerName = (bannerName: string, game: GameType): string => {
+  const translations: { [key: string]: { [key: string]: string } } = {
+    HSR: {
+      'Stellar Warp': 'Звездная деформация',
+      'Light Cone Event Warp': 'Событийная деформация световых конусов', 
+      'Departure Warp': 'Деформация отправления',
+      'Character Event Warp': 'Событийная деформация персонажей'
+    },
+    GENSHIN: {
+      'Wanderlust Invocation': 'Стандартная молитва',
+      'Character Event Wish': 'Молитва события персонажа',
+      'Weapon Event Wish': 'Молитва события оружия',
+      'Novice Wishes': 'Молитва новичка',
+      'Chronicled Wish': 'Хроникальная молитва'
+    }
+  }
+  
+  return translations[game]?.[bannerName] || bannerName
+}
+
+// Функция перевода типов предметов
+const translateItemType = (itemType: string): string => {
+  const translations: { [key: string]: string } = {
+    'Character': 'Персонажи',
+    'Light Cone': 'Световые конусы',
+    'Weapon': 'Оружие',
+    'Персонажи': 'Персонажи',
+    'Оружие': 'Оружие'
+  }
+  
+  return translations[itemType] || itemType
+}
+
 const Dashboard = () => {
   const { user } = useAuth()
   const [selectedGame, setSelectedGame] = useState<GameType>('HSR')
   const [gachaData, setGachaData] = useState<any>(null)
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'lightCones'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'equipment'>('overview')
 
   useEffect(() => {
     if (user?.uid) {
@@ -35,7 +69,49 @@ const Dashboard = () => {
         // Для Genshin Impact
         const statsResponse = await axios.get(`/api/genshin/stats/${uid}`)
         setStats(statsResponse.data)
-        setGachaData(null) // Пока не реализовано детальное получение данных
+        
+        // Преобразуем данные Genshin в формат, совместимый с Dashboard
+        if (statsResponse.data?.banners) {
+          const genshinPulls: any[] = []
+          
+          // Собираем все крутки из всех баннеров
+          for (const banner of statsResponse.data.banners) {
+            if (banner.gachaPulls) {
+              genshinPulls.push(...banner.gachaPulls.map((pull: any) => ({
+                ...pull,
+                bannerName: banner.bannerName
+              })))
+            }
+          }
+          
+          // Получаем все крутки пользователя для Genshin Impact
+          try {
+            const pullsResponse = await axios.get(`/api/gacha/user/${uid}?limit=1000&game=GENSHIN`)
+            const allPulls = pullsResponse.data?.pulls || []
+            
+            setGachaData({
+              pulls: allPulls,
+              pagination: {
+                total: allPulls.length,
+                page: 1,
+                limit: 1000
+              }
+            })
+          } catch (pullsError) {
+            console.error('Error loading Genshin pulls:', pullsError)
+            // Fallback: используем данные из stats
+            setGachaData({
+              pulls: genshinPulls.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()),
+              pagination: {
+                total: genshinPulls.length,
+                page: 1,
+                limit: 1000
+              }
+            })
+          }
+        } else {
+          setGachaData(null)
+        }
       }
     } catch (error) {
       console.error('Error loading user data:', error)
@@ -61,7 +137,8 @@ const Dashboard = () => {
   const getCharacterStats = () => {
     if (!gachaData?.pulls) return { total: 0, fiveStar: [], fourStar: [], all: [] }
     
-    const characters = gachaData.pulls.filter((p: any) => p.itemType === 'Character')
+    const characterType = selectedGame === 'HSR' ? 'Character' : 'Персонажи'
+    const characters = gachaData.pulls.filter((p: any) => p.itemType === characterType)
     const fiveStar = characters.filter((p: any) => p.rankType === 5)
     const fourStar = characters.filter((p: any) => p.rankType === 4)
     
@@ -91,36 +168,38 @@ const Dashboard = () => {
     }
   }
 
-  const getLightConeStats = () => {
+  const getEquipmentStats = () => {
     if (!gachaData?.pulls) return { total: 0, fiveStar: [], fourStar: [], all: [] }
     
-    const lightCones = gachaData.pulls.filter((p: any) => p.itemType === 'Light Cone')
-    const fiveStar = lightCones.filter((p: any) => p.rankType === 5)
-    const fourStar = lightCones.filter((p: any) => p.rankType === 4)
+    // Определяем тип снаряжения в зависимости от игры
+    const equipmentType = selectedGame === 'HSR' ? 'Light Cone' : 'Оружие'
+    const equipment = gachaData.pulls.filter((p: any) => p.itemType === equipmentType)
+    const fiveStar = equipment.filter((p: any) => p.rankType === 5)
+    const fourStar = equipment.filter((p: any) => p.rankType === 4)
     
-    const lightConeCounts: any = {}
-    lightCones.forEach((lc: any) => {
-      const name = lc.itemName
-      if (!lightConeCounts[name]) {
-        lightConeCounts[name] = {
+    const equipmentCounts: any = {}
+    equipment.forEach((item: any) => {
+      const name = item.itemName
+      if (!equipmentCounts[name]) {
+        equipmentCounts[name] = {
           name,
           count: 0,
-          rankType: lc.rankType,
-          latestPull: lc.time,
-          itemType: lc.itemType
+          rankType: item.rankType,
+          latestPull: item.time,
+          itemType: item.itemType
         }
       }
-      lightConeCounts[name].count++
-      if (new Date(lc.time) > new Date(lightConeCounts[name].latestPull)) {
-        lightConeCounts[name].latestPull = lc.time
+      equipmentCounts[name].count++
+      if (new Date(item.time) > new Date(equipmentCounts[name].latestPull)) {
+        equipmentCounts[name].latestPull = item.time
       }
     })
     
     return {
-      total: lightCones.length,
+      total: equipment.length,
       fiveStar,
       fourStar,
-      all: Object.values(lightConeCounts).sort((a: any, b: any) => b.rankType - a.rankType || b.count - a.count)
+      all: Object.values(equipmentCounts).sort((a: any, b: any) => b.rankType - a.rankType || b.count - a.count)
     }
   }
 
@@ -129,7 +208,7 @@ const Dashboard = () => {
     
     const bannerCounts: any = {}
     gachaData.pulls.forEach((pull: any) => {
-      const bannerName = pull.banner?.bannerName || 'Unknown'
+      const bannerName = translateBannerName(pull.banner?.bannerName || 'Unknown', selectedGame)
       bannerCounts[bannerName] = (bannerCounts[bannerName] || 0) + 1
     })
     
@@ -198,7 +277,7 @@ const Dashboard = () => {
 
   const rarityStats = getRarityStats()
   const characterStats = getCharacterStats()
-  const lightConeStats = getLightConeStats()
+  const equipmentStats = getEquipmentStats()
   const bannerStats = getBannerStats()
 
   const TabButton = ({ tab, label, icon }: { tab: string, label: string, icon: string }) => (
@@ -275,7 +354,11 @@ const Dashboard = () => {
           <div className="flex space-x-4 mb-6">
             <TabButton tab="overview" label="Обзор" icon="📊" />
             <TabButton tab="characters" label="Персонажи" icon="👥" />
-            <TabButton tab="lightCones" label="Световые конусы" icon="⚡" />
+            <TabButton 
+              tab="equipment" 
+              label={selectedGame === 'HSR' ? 'Световые конусы' : 'Оружие'} 
+              icon={selectedGame === 'HSR' ? '⚡' : '⚔️'} 
+            />
           </div>
 
           {activeTab === 'overview' && (
@@ -332,18 +415,24 @@ const Dashboard = () => {
                 </div>
 
                 <div className="card">
-                  <h3 className="text-lg font-bold text-white mb-4">⚡ Световые конусы</h3>
+                  <h3 className="text-lg font-bold text-white mb-4">
+                    {selectedGame === 'HSR' ? '⚡ Световые конусы' : '⚔️ Оружие'}
+                  </h3>
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-green-400 mb-2">{lightConeStats.total}</div>
+                    <div className="text-4xl font-bold text-green-400 mb-2">{equipmentStats.total}</div>
                     <div className="text-gray-300">Всего получено</div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div className="bg-yellow-500/20 rounded-lg p-3">
-                        <div className="text-yellow-400 font-bold">{lightConeStats.fiveStar.length}</div>
-                        <div className="text-gray-300 text-sm">5⭐ конусов</div>
+                        <div className="text-yellow-400 font-bold">{equipmentStats.fiveStar.length}</div>
+                        <div className="text-gray-300 text-sm">
+                          {selectedGame === 'HSR' ? '5⭐ конусов' : '5⭐ оружия'}
+                        </div>
                       </div>
                       <div className="bg-purple-500/20 rounded-lg p-3">
-                        <div className="text-purple-400 font-bold">{lightConeStats.fourStar.length}</div>
-                        <div className="text-gray-300 text-sm">4⭐ конусов</div>
+                        <div className="text-purple-400 font-bold">{equipmentStats.fourStar.length}</div>
+                        <div className="text-gray-300 text-sm">
+                          {selectedGame === 'HSR' ? '4⭐ конусов' : '4⭐ оружия'}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -380,11 +469,11 @@ const Dashboard = () => {
                           <div className="text-yellow-400 text-xl">⭐⭐⭐⭐⭐</div>
                           <div>
                             <div className="text-white font-medium">{pull.itemName}</div>
-                            <div className="text-gray-400 text-sm">{pull.itemType}</div>
+                            <div className="text-gray-400 text-sm">{translateItemType(pull.itemType)}</div>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-gray-300 text-sm">{pull.banner?.bannerName || 'Неизвестно'}</div>
+                          <div className="text-gray-300 text-sm">{translateBannerName(pull.banner?.bannerName || 'Неизвестно', selectedGame)}</div>
                           <div className="text-gray-400 text-xs">{new Date(pull.time).toLocaleDateString('ru-RU')}</div>
                         </div>
                       </div>
@@ -408,12 +497,12 @@ const Dashboard = () => {
                       <div className="flex items-center space-x-3">
                         <div className="w-16 h-16 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center">
                           <img 
-                            src={getItemImage(char.name, char.itemType)}
+                            // src={getItemImage(char.name, char.itemType)}
                             alt={char.name}
                             className="w-full h-full object-cover"
-                            onError={(e: any) => {
-                              e.target.src = `https://via.placeholder.com/64x64/1a1a1a/ffffff?text=${char.name.charAt(0)}`
-                            }}
+                            // onError={(e: any) => {
+                            //   e.target.src = `https://via.placeholder.com/64x64/1a1a1a/ffffff?text=${char.name.charAt(0)}`
+                            // }}
                           />
                         </div>
                         <div className="flex-1">
@@ -448,57 +537,63 @@ const Dashboard = () => {
             </div>
           )}
 
-          {activeTab === 'lightCones' && (
+          {activeTab === 'equipment' && (
             <div className="space-y-6">
               <div className="card">
-                <h2 className="text-xl font-bold text-white mb-4">⚡ Коллекция световых конусов</h2>
+                <h2 className="text-xl font-bold text-white mb-4">
+                  {selectedGame === 'HSR' ? '⚡ Коллекция световых конусов' : '⚔️ Коллекция оружия'}
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {lightConeStats.all.map((lc: any, index: number) => (
-                    <div key={`${lc.name}-${index}`} className={`relative rounded-lg p-4 hover:scale-105 transition-all ${
-                      lc.rankType === 5 ? 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border border-yellow-500/30' : 
-                      lc.rankType === 4 ? 'bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30' :
+                  {equipmentStats.all.map((item: any, index: number) => (
+                    <div key={`${item.name}-${index}`} className={`relative rounded-lg p-4 hover:scale-105 transition-all ${
+                      item.rankType === 5 ? 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border border-yellow-500/30' : 
+                      item.rankType === 4 ? 'bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30' :
                       'bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30'
                     }`}>
                       <div className="flex items-center space-x-3">
                         <div className="w-16 h-16 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center">
                           <img 
-                            src={getItemImage(lc.name, lc.itemType)}
-                            alt={lc.name}
+                            // src={getItemImage(item.name, item.itemType)}
+                            alt={item.name}
                             className="w-full h-full object-cover"
                             onError={(e: any) => {
-                              e.target.src = `https://via.placeholder.com/64x64/1a1a1a/ffffff?text=⚡`
+                              e.target.src = `https://via.placeholder.com/64x64/1a1a1a/ffffff?text=${selectedGame === 'HSR' ? '⚡' : '⚔'}`
                             }}
                           />
                         </div>
                         <div className="flex-1">
                           <div className={`font-bold ${
-                            lc.rankType === 5 ? 'text-yellow-400' : 
-                            lc.rankType === 4 ? 'text-purple-400' : 'text-blue-400'
+                            item.rankType === 5 ? 'text-yellow-400' : 
+                            item.rankType === 4 ? 'text-purple-400' : 'text-blue-400'
                           }`}>
-                            {lc.name}
+                            {item.name}
                           </div>
                           <div className="text-gray-300 text-sm">
-                            {'⭐'.repeat(lc.rankType)}
+                            {'⭐'.repeat(item.rankType)}
                           </div>
                           <div className="text-gray-400 text-xs">
-                            {lc.count > 1 ? `${lc.count} копий` : '1 копия'}
+                            {item.count > 1 ? `${item.count} копий` : '1 копия'}
                           </div>
                         </div>
                       </div>
                       <div className="absolute top-2 right-2">
-                        {lc.count > 1 && (
+                        {item.count > 1 && (
                           <span className="bg-hsr-gold text-black text-xs px-2 py-1 rounded-full font-bold">
-                            {lc.count}
+                            {item.count}
                           </span>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
-                {lightConeStats.all.length === 0 && (
+                {equipmentStats.all.length === 0 && (
                   <div className="text-center text-gray-400 py-8">
-                    <div className="text-4xl mb-2">⚡</div>
-                    <p>Световые конусы не найдены</p>
+                    <div className="text-4xl mb-2">
+                      {selectedGame === 'HSR' ? '⚡' : '⚔️'}
+                    </div>
+                    <p>
+                      {selectedGame === 'HSR' ? 'Световые конусы не найдены' : 'Оружие не найдено'}
+                    </p>
                   </div>
                 )}
               </div>

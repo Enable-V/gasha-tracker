@@ -4,7 +4,7 @@ $logLocation = "%userprofile%\AppData\LocalLow\miHoYo\Genshin Impact\output_log.
 $logLocationChina = "%userprofile%\AppData\LocalLow\miHoYo\$([char]0x539f)$([char]0x795e)\output_log.txt";
 
 $reg = $args[0]
-$apiHost = "public-operation-hk4e-sg.hoyoverse.com" 
+$apiHost = "public-operation-hk4e-sg.hoyoverse.com"
 if ($reg -eq "china") {
   Write-Host "Using China cache location"
   $logLocation = $logLocationChina
@@ -20,7 +20,7 @@ $path = [System.Environment]::ExpandEnvironmentVariables($logLocation);
 if (-Not [System.IO.File]::Exists($path)) {
     Write-Host "Cannot find the log file! Make sure to open the wish history first!" -ForegroundColor Red
 
-    if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {  
+    if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
         Write-Host "Do you want to try to run the script as Administrator? Press [ENTER] to continue, or any key to cancel."
         $keyInput = [Console]::ReadKey($true).Key
         if ($keyInput -ne "13") {
@@ -102,6 +102,5 @@ if (-Not $linkFound) {
 $wishHistoryUrl = $link
 
 Write-Host $wishHistoryUrl
-Write-Host "Genshin Impact wish history URL found!" -ForegroundColor Green
-# Возвращаем URL для использования в приложении
-return $wishHistoryUrl
+Set-Clipboard -Value $wishHistoryUrl
+Write-Host "Link copied to clipboard, paste it back to pom.moe" -ForegroundColor Green
