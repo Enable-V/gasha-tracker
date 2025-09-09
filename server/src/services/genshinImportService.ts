@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import axios from 'axios'
 import { logger } from '../middleware/logger'
+import { logImport } from '../utils/importLogger'
 
 const prisma = new PrismaClient()
 
@@ -113,6 +114,9 @@ export class GenshinImportService {
         size: size.toString()
       }
 
+  // Ensure API returns English names
+  requestParams.lang = 'en'
+
       // Добавляем end_id если он не равен '0'
       if (endId !== '0') {
         requestParams.end_id = endId
@@ -205,6 +209,8 @@ export class GenshinImportService {
 
                 if (existing) {
                   totalSkipped++
+                  // Log duplicate skip
+                  await logImport({ source: 'URL_IMPORT', action: 'SKIP_DUPLICATE', uid: user.uid, gachaId: `genshin_${item.id}`, itemName: item.name, gacha_type: gachaType })
                   continue
                 }
 
@@ -223,12 +229,14 @@ export class GenshinImportService {
                     game: 'GENSHIN'
                   }
                 })
-
                 bannerImported++
                 totalImported++
+                // Log successful import
+                await logImport({ source: 'URL_IMPORT', action: 'IMPORTED', uid: user.uid, gachaId: `genshin_${item.id}`, itemName: item.name, gacha_type: gachaType })
 
               } catch (error: any) {
                 console.error(`Error importing item ${item.id}:`, error.message)
+                await logImport({ source: 'URL_IMPORT', action: 'ERROR', uid: user.uid, itemId: item.id, error: error.message })
                 continue
               }
             }

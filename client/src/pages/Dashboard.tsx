@@ -59,7 +59,7 @@ const Dashboard = () => {
     try {
       if (selectedGame === 'HSR') {
         const [gachaResponse, statsResponse] = await Promise.all([
-          axios.get(`/api/gacha/user/${uid}?limit=1000`),
+          axios.get(`/api/gacha/user/${uid}?limit=0`),
           axios.get(`/api/gacha/stats/${uid}`)
         ])
         
@@ -86,7 +86,7 @@ const Dashboard = () => {
           
           // Получаем все крутки пользователя для Genshin Impact
           try {
-            const pullsResponse = await axios.get(`/api/gacha/user/${uid}?limit=1000&game=GENSHIN`)
+            const pullsResponse = await axios.get(`/api/gacha/user/${uid}?limit=0&game=GENSHIN`)
             const allPulls = pullsResponse.data?.pulls || []
             
             setGachaData({
@@ -94,7 +94,7 @@ const Dashboard = () => {
               pagination: {
                 total: allPulls.length,
                 page: 1,
-                limit: 1000
+                limit: 0
               }
             })
           } catch (pullsError) {
@@ -105,7 +105,7 @@ const Dashboard = () => {
               pagination: {
                 total: genshinPulls.length,
                 page: 1,
-                limit: 1000
+                limit: 0
               }
             })
           }

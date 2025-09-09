@@ -3,6 +3,7 @@ import multer from 'multer'
 import { genshinImportService } from '../services/genshinImportService'
 import { authenticateToken, requireOwnership } from '../middleware/auth'
 import { PrismaClient } from '@prisma/client'
+import { logImport } from '../utils/importLogger'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -276,9 +277,10 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
       }
 
       for (const pull of pulls) {
-        // Преобразуем данные paimon-moe в стандартный формат
-        const itemName = pull.id || 'Unknown Item';
-        const itemType = pull.type === 'character' ? 'Персонажи' : 'Оружие';
+    // Преобразуем данные paimon-moe в стандартный формат
+    // Сохраняем оригинальное имя (если есть) и нормализуем тип к английскому
+    const itemName = pull.name || pull.item_id || pull.id || 'Unknown Item'
+    const itemType = (pull.type === 'character' || pull.type === 'Character' || pull.type === '角色') ? 'Character' : 'Weapon'
         
         // Определяем rankType: если есть rate=1 или pity высокий, то 5*, иначе 4* или 3*
         let rankType = 3; // default to 3*
@@ -354,6 +356,7 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
       if (existingPull) {
         console.log(`⏭️ Skipping existing pull: ${pull.name} at ${pull.time} (duplicate found)`);
         skippedCount++
+        await logImport({ source: 'JSON_IMPORT', action: 'SKIP_DUPLICATE', uid: userId, gachaId: pull.id, itemName: pull.name, bannerId: pull.gacha_type })
         continue
       }
 
@@ -416,6 +419,8 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
           isFeatured: pull.rate === 1 // 5* предметы считаем featured
         }
       })
+
+  await logImport({ source: 'JSON_IMPORT', action: 'IMPORTED', uid: userId, gachaId: pull.id, itemName: pull.name, bannerId: pull.gacha_type })
 
       console.log(`✅ Successfully imported pull: ${pull.name} at ${pull.time}`);
       importedCount++

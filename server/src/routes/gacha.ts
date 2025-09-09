@@ -10,10 +10,12 @@ const prisma = new PrismaClient()
 // Get gacha pulls for a user (требует аутентификации и владения)
 router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
   try {
-    const { uid } = req.params;
-    const { banner, limit = 50, offset = 0, game } = req.query;
-    
-    console.log(`Fetching gacha pulls for UID: ${uid}, Game: ${game || 'HSR'}`);
+  const { uid } = req.params;
+  const { banner, limit = '50', offset = '0', game } = req.query;
+  const limitNum = Number(limit);
+  const offsetNum = Number(offset);
+
+  console.log(`Fetching gacha pulls for UID: ${uid}, Game: ${game || 'HSR'}`);
     
     const user = await prisma.user.findUnique({
       where: { uid }
@@ -38,17 +40,19 @@ router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: Aut
     
     console.log(`Searching with where clause:`, whereClause);
     
-    const pulls = await prisma.gachaPull.findMany({
+    const findOptions: any = {
       where: whereClause,
-      include: {
-        banner: true
-      },
-      orderBy: {
-        time: 'desc'
-      },
-      take: Number(limit),
-      skip: Number(offset)
-    });
+      include: { banner: true },
+      orderBy: { time: 'desc' },
+      skip: offsetNum
+    };
+
+    // If limitNum > 0, apply take; if limitNum === 0 treat as "no limit" and don't pass `take` to Prisma
+    if (limitNum > 0) {
+      findOptions.take = limitNum;
+    }
+
+    const pulls = await prisma.gachaPull.findMany(findOptions);
     
     console.log(`Found ${pulls.length} pulls`);
     
@@ -65,13 +69,15 @@ router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: Aut
       time: pull.time.toISOString() // Убеждаемся что дата правильно сериализуется
     }));
     
+    const responseLimit = limitNum === 0 ? total : limitNum;
+
     res.json({
       pulls: serializedPulls,
       pagination: {
         total,
-        limit: Number(limit),
-        offset: Number(offset),
-        hasMore: total > Number(offset) + Number(limit)
+        limit: responseLimit,
+        offset: offsetNum,
+        hasMore: limitNum === 0 ? false : total > offsetNum + limitNum
       }
     });
   } catch (error) {
