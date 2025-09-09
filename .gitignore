@@ -2,6 +2,9 @@
 REPO_WORKFLOW.md
 REPO_WORKFLOW_PUBLIC.md
 
+# Server error logs (never commit)
+server/error/
+
 # Logs
 logs
 error
