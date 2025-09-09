@@ -30,13 +30,20 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// Get user by UID
-router.get('/:uid', async (req: Request, res: Response) => {
+// Get current user profile (требует аутентификации)
+router.get('/profile', async (req: Request, res: Response) => {
   try {
-    const { uid } = req.params;
-    
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
+
+    const userId = req.user.id;
+
     const user = await req.prisma.user.findUnique({
-      where: { uid },
+      where: { id: userId },
       include: {
         userStats: true,
         _count: {
@@ -46,53 +53,74 @@ router.get('/:uid', async (req: Request, res: Response) => {
         }
       }
     });
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     res.json(user);
   } catch (error) {
-    req.logger.error('Error fetching user:', error);
-    res.status(500).json({ error: 'Failed to fetch user' });
+    req.logger.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
   }
 });
 
-// Create or update user
-router.post('/', async (req: Request, res: Response) => {
+// Update current user profile (требует аутентификации)
+router.put('/profile', async (req: Request, res: Response) => {
   try {
-    const { uid, username } = req.body;
-    
-    if (!uid || !username) {
-      return res.status(400).json({ error: 'UID and username are required' });
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
     }
-    
-    const user = await req.prisma.user.upsert({
-      where: { uid },
-      update: { username },
-      create: { uid, username }
+
+    const userId = req.user.id;
+    const { username, email } = req.body;
+
+    const updateData: any = {};
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+
+    const user = await req.prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        uid: true,
+        username: true,
+        email: true,
+        createdAt: true
+      }
     });
-    
+
     res.json(user);
   } catch (error) {
-    req.logger.error('Error creating/updating user:', error);
-    res.status(500).json({ error: 'Failed to create/update user' });
+    req.logger.error('Error updating user profile:', error);
+    res.status(500).json({ error: 'Failed to update user profile' });
   }
 });
 
-// Delete user
-router.delete('/:uid', async (req: Request, res: Response) => {
+// Delete current user account (требует аутентификации)
+router.delete('/profile', async (req: Request, res: Response) => {
   try {
-    const { uid } = req.params;
-    
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
+
+    const userId = req.user.id;
+
     await req.prisma.user.delete({
-      where: { uid }
+      where: { id: userId }
     });
-    
-    res.json({ message: 'User deleted successfully' });
+
+    res.json({ message: 'User account deleted successfully' });
   } catch (error) {
-    req.logger.error('Error deleting user:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
+    req.logger.error('Error deleting user account:', error);
+    res.status(500).json({ error: 'Failed to delete user account' });
   }
 });
 

@@ -4,6 +4,14 @@ import axios from 'axios'
 
 type GameType = 'HSR' | 'GENSHIN'
 
+// Интерфейс для маппинга названий предметов
+interface ItemNameMapping {
+  englishName: string
+  russianName: string
+  game: GameType
+  itemType: string
+}
+
 // Функция перевода названий баннеров
 const translateBannerName = (bannerName: string, game: GameType): string => {
   const translations: { [key: string]: { [key: string]: string } } = {
@@ -26,16 +34,23 @@ const translateBannerName = (bannerName: string, game: GameType): string => {
 }
 
 // Функция перевода типов предметов
-const translateItemType = (itemType: string): string => {
-  const translations: { [key: string]: string } = {
-    'Character': 'Персонажи',
-    'Light Cone': 'Световые конусы',
-    'Weapon': 'Оружие',
-    'Персонажи': 'Персонажи',
-    'Оружие': 'Оружие'
+const translateItemType = (itemType: string, game: GameType): string => {
+  const translations: { [key: string]: { [key: string]: string } } = {
+    'Character': {
+      'HSR': 'Персонажи',
+      'GENSHIN': 'Персонажи'
+    },
+    'Light Cone': {
+      'HSR': 'Световые конусы',
+      'GENSHIN': 'Световые конусы'
+    },
+    'Weapon': {
+      'HSR': 'Оружие',
+      'GENSHIN': 'Оружие'
+    }
   }
   
-  return translations[itemType] || itemType
+  return translations[itemType]?.[game] || itemType
 }
 
 const Dashboard = () => {
@@ -45,29 +60,58 @@ const Dashboard = () => {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'equipment'>('overview')
+  const [itemMappings, setItemMappings] = useState<{ [key: string]: string }>({})
+
+  // Функция для получения русского названия предмета
+  const translateItemName = (englishName: string, game: GameType): string => {
+    const key = `${englishName.toLowerCase()}_${game}`
+    return itemMappings[key] || englishName
+  }
+
+  // Загрузка переводов названий предметов
+  const loadItemMappings = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get('/api/items/mappings', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      // Создаем карту для быстрого поиска: "englishname_game" -> "russianName"
+      const mappings: { [key: string]: string } = {}
+      response.data.forEach((mapping: ItemNameMapping) => {
+        const key = `${mapping.englishName.toLowerCase()}_${mapping.game}`
+        mappings[key] = mapping.russianName
+      })
+      
+      setItemMappings(mappings)
+    } catch (error) {
+      console.error('Ошибка загрузки переводов предметов:', error)
+    }
+  }
 
   useEffect(() => {
-    if (user?.uid) {
-      loadUserData(user.uid)
+    if (user) {
+      loadUserData()
+      loadItemMappings()
     }
   }, [user, selectedGame])
 
-  const loadUserData = async (uid: string) => {
-    if (!uid) return
+  const loadUserData = async () => {
+    if (!user) return
     
     setLoading(true)
     try {
       if (selectedGame === 'HSR') {
         const [gachaResponse, statsResponse] = await Promise.all([
-          axios.get(`/api/gacha/user/${uid}?limit=0`),
-          axios.get(`/api/gacha/stats/${uid}`)
+          axios.get(`/api/gacha/user?limit=0`),
+          axios.get(`/api/gacha/stats`)
         ])
         
         setGachaData(gachaResponse.data)
         setStats(statsResponse.data)
       } else {
         // Для Genshin Impact
-        const statsResponse = await axios.get(`/api/genshin/stats/${uid}`)
+        const statsResponse = await axios.get(`/api/genshin/stats`)
         setStats(statsResponse.data)
         
         // Преобразуем данные Genshin в формат, совместимый с Dashboard
@@ -86,7 +130,7 @@ const Dashboard = () => {
           
           // Получаем все крутки пользователя для Genshin Impact
           try {
-            const pullsResponse = await axios.get(`/api/gacha/user/${uid}?limit=0&game=GENSHIN`)
+            const pullsResponse = await axios.get(`/api/gacha/user?limit=0&game=GENSHIN`)
             const allPulls = pullsResponse.data?.pulls || []
             
             setGachaData({
@@ -134,13 +178,13 @@ const Dashboard = () => {
       setLoading(true)
       
       if (selectedGame === 'HSR') {
-        await axios.delete(`/api/gacha/clear-pulls/${user.uid}`)
+        await axios.delete(`/api/gacha/clear-pulls`)
       } else {
-        await axios.delete(`/api/genshin/clear-pulls/${user.uid}`)
+        await axios.delete(`/api/genshin/clear-pulls`)
       }
       
       // Перезагружаем данные после очистки
-      await loadUserData(user.uid)
+      await loadUserData()
       
       alert(`Все крутки ${gameName} успешно удалены!`)
     } catch (error) {
@@ -166,26 +210,29 @@ const Dashboard = () => {
   const getCharacterStats = () => {
     if (!gachaData?.pulls) return { total: 0, fiveStar: [], fourStar: [], all: [] }
     
-    const characterType = selectedGame === 'HSR' ? 'Character' : 'Персонажи'
+    // Для персонажей всегда используем английские названия типов
+    const characterType = selectedGame === 'HSR' ? 'Character' : 'Character'
     const characters = gachaData.pulls.filter((p: any) => p.itemType === characterType)
     const fiveStar = characters.filter((p: any) => p.rankType === 5)
     const fourStar = characters.filter((p: any) => p.rankType === 4)
     
     const characterCounts: any = {}
     characters.forEach((char: any) => {
-      const name = char.itemName
-      if (!characterCounts[name]) {
-        characterCounts[name] = {
+      const name = translateItemName(char.itemName, selectedGame)
+      const originalName = char.itemName
+      if (!characterCounts[originalName]) {
+        characterCounts[originalName] = {
           name,
+          originalName,
           count: 0,
           rankType: char.rankType,
           latestPull: char.time,
           itemType: char.itemType
         }
       }
-      characterCounts[name].count++
-      if (new Date(char.time) > new Date(characterCounts[name].latestPull)) {
-        characterCounts[name].latestPull = char.time
+      characterCounts[originalName].count++
+      if (new Date(char.time) > new Date(characterCounts[originalName].latestPull)) {
+        characterCounts[originalName].latestPull = char.time
       }
     })
     
@@ -200,27 +247,29 @@ const Dashboard = () => {
   const getEquipmentStats = () => {
     if (!gachaData?.pulls) return { total: 0, fiveStar: [], fourStar: [], all: [] }
     
-    // Определяем тип снаряжения в зависимости от игры
-    const equipmentType = selectedGame === 'HSR' ? 'Light Cone' : 'Оружие'
+    // Определяем тип снаряжения в зависимости от игры (всегда английские названия)
+    const equipmentType = selectedGame === 'HSR' ? 'Light Cone' : 'Weapon'
     const equipment = gachaData.pulls.filter((p: any) => p.itemType === equipmentType)
     const fiveStar = equipment.filter((p: any) => p.rankType === 5)
     const fourStar = equipment.filter((p: any) => p.rankType === 4)
     
     const equipmentCounts: any = {}
     equipment.forEach((item: any) => {
-      const name = item.itemName
-      if (!equipmentCounts[name]) {
-        equipmentCounts[name] = {
+      const name = translateItemName(item.itemName, selectedGame)
+      const originalName = item.itemName
+      if (!equipmentCounts[originalName]) {
+        equipmentCounts[originalName] = {
           name,
+          originalName,
           count: 0,
           rankType: item.rankType,
           latestPull: item.time,
           itemType: item.itemType
         }
       }
-      equipmentCounts[name].count++
-      if (new Date(item.time) > new Date(equipmentCounts[name].latestPull)) {
-        equipmentCounts[name].latestPull = item.time
+      equipmentCounts[originalName].count++
+      if (new Date(item.time) > new Date(equipmentCounts[originalName].latestPull)) {
+        equipmentCounts[originalName].latestPull = item.time
       }
     })
     
@@ -445,50 +494,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="card">
-                  <h3 className="text-lg font-bold text-white mb-4">👥 Персонажи</h3>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-400 mb-2">{characterStats.total}</div>
-                    <div className="text-gray-300">Всего получено</div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="bg-yellow-500/20 rounded-lg p-3">
-                        <div className="text-yellow-400 font-bold">{characterStats.fiveStar.length}</div>
-                        <div className="text-gray-300 text-sm">5⭐ персонажей</div>
-                      </div>
-                      <div className="bg-purple-500/20 rounded-lg p-3">
-                        <div className="text-purple-400 font-bold">{characterStats.fourStar.length}</div>
-                        <div className="text-gray-300 text-sm">4⭐ персонажей</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="card">
-                  <h3 className="text-lg font-bold text-white mb-4">
-                    {selectedGame === 'HSR' ? '⚡ Световые конусы' : '⚔️ Оружие'}
-                  </h3>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-green-400 mb-2">{equipmentStats.total}</div>
-                    <div className="text-gray-300">Всего получено</div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="bg-yellow-500/20 rounded-lg p-3">
-                        <div className="text-yellow-400 font-bold">{equipmentStats.fiveStar.length}</div>
-                        <div className="text-gray-300 text-sm">
-                          {selectedGame === 'HSR' ? '5⭐ конусов' : '5⭐ оружия'}
-                        </div>
-                      </div>
-                      <div className="bg-purple-500/20 rounded-lg p-3">
-                        <div className="text-purple-400 font-bold">{equipmentStats.fourStar.length}</div>
-                        <div className="text-gray-300 text-sm">
-                          {selectedGame === 'HSR' ? '4⭐ конусов' : '4⭐ оружия'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+              
               <div className="card">
                 <h2 className="text-xl font-bold text-white mb-4">🎯 Распределение по баннерам</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -518,8 +524,8 @@ const Dashboard = () => {
                         <div className="flex items-center space-x-3">
                           <div className="text-yellow-400 text-xl">⭐⭐⭐⭐⭐</div>
                           <div>
-                            <div className="text-white font-medium">{pull.itemName}</div>
-                            <div className="text-gray-400 text-sm">{translateItemType(pull.itemType)}</div>
+                            <div className="text-white font-medium">{translateItemName(pull.itemName, selectedGame)}</div>
+                            <div className="text-gray-400 text-sm">{translateItemType(pull.itemType, selectedGame)}</div>
                           </div>
                         </div>
                         <div className="text-right">

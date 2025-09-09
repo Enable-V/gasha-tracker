@@ -23,10 +23,15 @@ const upload = multer({
   }
 });
 
-// Upload gacha data from JSON file (теперь требует аутентификации)
-router.post('/json/:uid', authenticateToken, requireOwnership, upload.single('gachaFile'), async (req: AuthRequest, res: Response) => {
+// Upload gacha data from JSON file for current user (требует аутентификации)
+router.post('/json', authenticateToken, upload.single('gachaFile'), async (req: AuthRequest, res: Response) => {
   try {
-    const { uid } = req.params;
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -34,6 +39,7 @@ router.post('/json/:uid', authenticateToken, requireOwnership, upload.single('ga
 
     // Пользователь уже аутентифицирован через middleware
     const user = req.user!;
+    const userId = req.user.id;
 
     let gachaData;
     try {
@@ -42,7 +48,7 @@ router.post('/json/:uid', authenticateToken, requireOwnership, upload.single('ga
       return res.status(400).json({ error: 'Invalid JSON format' });
     }
 
-    console.log(`📁 Processing pom-moe HSR JSON file for UID: ${uid}`)
+    console.log(`📁 Processing pom-moe HSR JSON file for user ID: ${userId}`)
     console.log(`📊 JSON keys found: ${Object.keys(gachaData).join(', ')}`)
 
     // Check if data is wrapped in "default" and extract it for logging
@@ -58,7 +64,7 @@ router.post('/json/:uid', authenticateToken, requireOwnership, upload.single('ga
     let result;
     if (isPomMoeFormat(gachaData)) {
       console.log(`✅ Pom-moe format detected successfully!`);
-      console.log(`🚀 Processing pom-moe HSR data for UID: ${uid}`);
+      console.log(`🚀 Processing pom-moe HSR data for user ID: ${userId}`);
       result = await processPomMoeData(prisma, user.id, gachaData);
     } else {
       console.log(`❌ Pom-moe format NOT detected!`);
@@ -76,49 +82,56 @@ router.post('/json/:uid', authenticateToken, requireOwnership, upload.single('ga
 // Upload gacha data from HSR URL (теперь требует аутентификации)
 
 
-// Upload gacha data from HSR URL (теперь требует аутентификации)
-router.post('/url/:uid', authenticateToken, requireOwnership, async (req: AuthRequest, res: Response) => {
+// Upload gacha data from HSR URL for current user (требует аутентификации)
+router.post('/url', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { uid } = req.params;
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
+
     const { url } = req.body;
-    
-    console.log(`🌐 Starting HSR URL import for UID: ${uid}`)
+    const userId = req.user.id;
+
+    console.log(`🌐 Starting HSR URL import for user ID: ${userId}`)
     console.log(`🔗 URL: ${url.substring(0, 50)}...`)
-    
+
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
-    
+
     // Пользователь уже аутентифицирован через middleware
     const user = req.user!;
-    
+
     // Extract authkey from URL
     const authkey = extractAuthkey(url);
     console.log(`🔑 Authkey extracted, starting data fetch...`)
     if (!authkey) {
-      console.error(`Invalid URL format for UID: ${uid}`);
+      console.error(`Invalid URL format for user ID: ${userId}`);
       return res.status(400).json({ error: 'Invalid HSR URL format. Please make sure you copied the complete URL.' });
     }
-    
-    console.log(`Extracted authkey for UID: ${uid}`);
-    
+
+    console.log(`Extracted authkey for user ID: ${userId}`);
+
     // Fetch gacha data from HSR API
     const gachaData = await fetchGachaDataFromAPI(authkey, url);
-    console.log(`Fetched ${gachaData.length} gacha records for UID: ${uid}`);
-    
+    console.log(`Fetched ${gachaData.length} gacha records for user ID: ${userId}`);
+
     if (gachaData.length === 0) {
       return res.status(400).json({ error: 'No gacha data found. Please make sure you have gacha history in the game.' });
     }
-    
+
     // Process gacha data
     const result = await processGachaData(prisma, user.id, gachaData);
-    
-    console.log(`Import completed for UID: ${uid}. Imported: ${result.imported}, Skipped: ${result.skipped}`);
-    
+
+    console.log(`Import completed for user ID: ${userId}. Imported: ${result.imported}, Skipped: ${result.skipped}`);
+
     res.json(result);
   } catch (error: any) {
     console.error('Error fetching gacha data from URL:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch gacha data from URL',
       details: error.message
     });

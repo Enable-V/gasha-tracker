@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext'
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    uid: '',
     username: '',
     email: '',
     password: '',
@@ -32,7 +31,7 @@ const Register = () => {
     setLoading(true)
 
     try {
-      await register(formData.uid, formData.username, formData.email, formData.password)
+      await register(formData.username, formData.email, formData.password)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Ошибка регистрации')
     } finally {
@@ -63,22 +62,6 @@ const Register = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="uid" className="block text-sm font-medium text-gray-300 mb-2">
-              UID игрока *
-            </label>
-            <input
-              type="text"
-              id="uid"
-              name="uid"
-              required
-              value={formData.uid}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold focus:ring-1 focus:ring-hsr-gold"
-              placeholder="Ваш UID из игры"
-            />
-          </div>
-
-          <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
               Имя пользователя *
             </label>
@@ -90,7 +73,7 @@ const Register = () => {
               value={formData.username}
               onChange={handleChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold focus:ring-1 focus:ring-hsr-gold"
-              placeholder="Ваше имя"
+              placeholder="Придумайте имя пользователя"
             />
           </div>
 

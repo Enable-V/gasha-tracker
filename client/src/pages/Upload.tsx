@@ -39,25 +39,25 @@ const Upload = () => {
 
     try {
       if (selectedMethod === 'url') {
-        const endpoint = selectedGame === 'HSR' 
-          ? `/api/upload/url/${uid}` 
-          : `/api/genshin/import/${uid}`
-        
-        const payload = selectedGame === 'HSR' 
-          ? { url } 
+        const endpoint = selectedGame === 'HSR'
+          ? `/api/upload/url`
+          : `/api/genshin/import`
+
+        const payload = selectedGame === 'HSR'
+          ? { url }
           : { gachaUrl: url }
-        
+
         const response = await axios.post(endpoint, payload)
         setResult(response.data)
         setUrl('') // Очищаем URL после успешной загрузки
       } else if (selectedMethod === 'file') {
         const formData = new FormData()
         formData.append('gachaFile', selectedFile!)
-        
-        const endpoint = selectedGame === 'HSR' 
-          ? `/api/upload/json/${uid}` 
-          : `/api/genshin/import/json/${uid}`
-        
+
+        const endpoint = selectedGame === 'HSR'
+          ? `/api/upload/json`
+          : `/api/genshin/import/json`
+
         const response = await axios.post(endpoint, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'

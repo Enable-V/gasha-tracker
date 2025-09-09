@@ -11,13 +11,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-i
 // Регистрация пользователя
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { uid, username, email, password } = req.body
+    const { username, email, password } = req.body
 
     // Валидация входных данных
-    if (!uid || !username || !password) {
+    if (!username || !password) {
       return res.status(400).json({
         error: 'Missing required fields',
-        message: 'UID, имя пользователя и пароль обязательны'
+        message: 'Имя пользователя и пароль обязательны'
       })
     }
 
@@ -32,18 +32,31 @@ router.post('/register', async (req: Request, res: Response) => {
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
-          { uid },
+          { username },
           { email: email || undefined }
-        ]
+        ].filter(Boolean)
       }
     })
 
     if (existingUser) {
       return res.status(409).json({
         error: 'User already exists',
-        message: 'Пользователь с таким UID или email уже существует'
+        message: 'Пользователь с таким именем или email уже существует'
       })
     }
+
+    // Генерируем уникальный UID для обратной совместимости (не более 20 символов)
+    let uid: string
+    let attempts = 0
+    do {
+      uid = `u${Date.now().toString().slice(-6)}${Math.random().toString(36).substr(2, 6)}`
+      attempts++
+      if (attempts > 10) {
+        // Fallback на более простой UID если не можем сгенерировать уникальный
+        uid = `u${Date.now().toString().slice(-8)}`
+        break
+      }
+    } while (await prisma.user.findUnique({ where: { uid } }))
 
     // Хешируем пароль
     const hashedPassword = await bcrypt.hash(password, 10)
@@ -89,24 +102,29 @@ router.post('/register', async (req: Request, res: Response) => {
 // Вход пользователя
 router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { uid, password } = req.body
+    const { username, password } = req.body
 
-    if (!uid || !password) {
+    if (!username || !password) {
       return res.status(400).json({
         error: 'Missing credentials',
-        message: 'UID и пароль обязательны'
+        message: 'Имя пользователя и пароль обязательны'
       })
     }
 
-    // Находим пользователя
-    const user = await prisma.user.findUnique({
-      where: { uid }
+    // Находим пользователя по username или email
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username },
+          { email: username } // Позволяем вход по email тоже
+        ]
+      }
     })
 
     if (!user || !user.password) {
       return res.status(401).json({
         error: 'Invalid credentials',
-        message: 'Неверный UID или пароль'
+        message: 'Неверное имя пользователя/email или пароль'
       })
     }
 
@@ -122,7 +140,7 @@ router.post('/login', async (req: Request, res: Response) => {
     if (!isValidPassword) {
       return res.status(401).json({
         error: 'Invalid credentials',
-        message: 'Неверный UID или пароль'
+        message: 'Неверное имя пользователя/email или пароль'
       })
     }
 

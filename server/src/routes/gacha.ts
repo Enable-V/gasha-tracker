@@ -7,39 +7,46 @@ import { logger } from '../middleware/logger'
 const router = Router();
 const prisma = new PrismaClient()
 
-// Get gacha pulls for a user (требует аутентификации и владения)
-router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
+// Get gacha pulls for current user (требует аутентификации)
+router.get('/user', authenticateOptional, async (req: AuthRequest, res: Response) => {
   try {
-  const { uid } = req.params;
-  const { banner, limit = '50', offset = '0', game } = req.query;
-  const limitNum = Number(limit);
-  const offsetNum = Number(offset);
+    const { banner, limit = '50', offset = '0', game } = req.query;
+    const limitNum = Number(limit);
+    const offsetNum = Number(offset);
 
-  console.log(`Fetching gacha pulls for UID: ${uid}, Game: ${game || 'HSR'}`);
-    
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
+
+    const userId = req.user.id;
+    console.log(`Fetching gacha pulls for user ID: ${userId}, Game: ${game || 'HSR'}`);
+
     const user = await prisma.user.findUnique({
-      where: { uid }
+      where: { id: userId }
     });
-    
+
     if (!user) {
-      console.error(`User not found: ${uid}`);
+      console.error(`User not found: ${userId}`);
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     console.log(`Found user: ${user.id} (${user.username})`);
-    
-    const whereClause: any = { 
+
+    const whereClause: any = {
       userId: user.id,
       // Добавляем фильтр по игре, по умолчанию HSR для обратной совместимости
       game: game ? (game as string).toUpperCase() : 'HSR'
     };
-    
+
     if (banner) {
       whereClause.bannerId = banner;
     }
-    
+
     console.log(`Searching with where clause:`, whereClause);
-    
+
     const findOptions: any = {
       where: whereClause,
       include: { banner: true },
@@ -53,22 +60,22 @@ router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: Aut
     }
 
     const pulls = await prisma.gachaPull.findMany(findOptions);
-    
+
     console.log(`Found ${pulls.length} pulls`);
-    
+
     const total = await prisma.gachaPull.count({
       where: whereClause
     });
-    
+
     console.log(`Total pulls count: ${total}`);
-    
+
     // Преобразуем BigInt в строку для JSON сериализации
     const serializedPulls = pulls.map((pull: any) => ({
       ...pull,
       id: pull.id.toString(), // Преобразуем BigInt в строку
       time: pull.time.toISOString() // Убеждаемся что дата правильно сериализуется
     }));
-    
+
     const responseLimit = limitNum === 0 ? total : limitNum;
 
     res.json({
@@ -86,29 +93,38 @@ router.get('/user/:uid', authenticateOptional, requireOwnership, async (req: Aut
   }
 });
 
-// Get gacha statistics for a user (требует аутентификации и владения)
-router.get('/stats/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
+// Get gacha statistics for current user (требует аутентификации)
+router.get('/stats', authenticateOptional, async (req: AuthRequest, res: Response) => {
   try {
-    const { uid } = req.params;
     const { game } = req.query;
-    
+
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
+
+    const userId = req.user.id;
+    console.log(`Fetching stats for user ID: ${userId}, Game: ${game || 'HSR'}`);
+
     const user = await prisma.user.findUnique({
-      where: { uid }
+      where: { id: userId }
     });
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     const gameFilter = game ? (game as string).toUpperCase() : 'HSR';
-    
+
     const stats = await prisma.userStats.findMany({
-      where: { 
+      where: {
         userId: user.id,
         game: gameFilter as any
       }
     });
-    
+
     // Get recent 5-star pulls
     const recentFiveStars = await prisma.gachaPull.findMany({
       where: {
@@ -124,14 +140,14 @@ router.get('/stats/:uid', authenticateOptional, requireOwnership, async (req: Au
       },
       take: 10
     });
-    
+
     // Преобразуем BigInt в строку для JSON сериализации
     const serializedFiveStars = recentFiveStars.map((pull: any) => ({
       ...pull,
       id: pull.id.toString(),
       time: pull.time.toISOString()
     }));
-    
+
     res.json({
       stats,
       recentFiveStars: serializedFiveStars
@@ -142,28 +158,36 @@ router.get('/stats/:uid', authenticateOptional, requireOwnership, async (req: Au
   }
 });
 
-// Import gacha data
-router.post('/import/:uid', async (req: AuthRequest, res: Response) => {
+// Import gacha data for current user (требует аутентификации)
+router.post('/import', authenticateOptional, async (req: AuthRequest, res: Response) => {
   try {
-    const { uid } = req.params;
     const { gachaData } = req.body;
-    
+
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
+
     if (!gachaData || !Array.isArray(gachaData)) {
       return res.status(400).json({ error: 'Invalid gacha data format' });
     }
-    
-    // Find or create user
+
+    const userId = req.user.id;
+    console.log(`Importing gacha data for user ID: ${userId}`);
+
     const user = await prisma.user.findUnique({
-      where: { uid }
+      where: { id: userId }
     });
-    
+
     if (!user) {
-      return res.status(404).json({ error: 'User not found. Please create user first.' });
+      return res.status(404).json({ error: 'User not found' });
     }
-    
+
     let importedCount = 0;
     let skippedCount = 0;
-    
+
     for (const pull of gachaData) {
       try {
         // Calculate pity count
@@ -175,7 +199,7 @@ router.post('/import/:uid', async (req: AuthRequest, res: Response) => {
           },
           orderBy: { time: 'desc' }
         });
-        
+
         let pityCount = 1;
         for (const prevPull of previousPulls) {
           if (prevPull.rankType === 5) break;
@@ -279,19 +303,27 @@ async function updateUserStats(prisma: any, userId: number) {
   }
 }
 
-// Clear all HSR pulls for a user (требует аутентификации и владения)
-router.delete('/clear-pulls/:uid', authenticateOptional, requireOwnership, async (req: AuthRequest, res: Response) => {
+// Clear all HSR pulls for current user (требует аутентификации)
+router.delete('/clear-pulls', authenticateOptional, async (req: AuthRequest, res: Response) => {
   try {
-    const { uid } = req.params;
-    
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
+
+    const userId = req.user.id;
+    console.log(`Clearing HSR pulls for user ID: ${userId}`);
+
     const user = await prisma.user.findUnique({
-      where: { uid }
+      where: { id: userId }
     });
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     // Удаляем все HSR крутки пользователя
     const deletedPulls = await prisma.gachaPull.deleteMany({
       where: {
@@ -299,7 +331,7 @@ router.delete('/clear-pulls/:uid', authenticateOptional, requireOwnership, async
         game: 'HSR'
       }
     });
-    
+
     // Удаляем соответствующие статистики HSR
     await prisma.userStats.deleteMany({
       where: {
@@ -307,9 +339,9 @@ router.delete('/clear-pulls/:uid', authenticateOptional, requireOwnership, async
         game: 'HSR'
       }
     });
-    
-    console.log(`Cleared ${deletedPulls.count} HSR pulls for user ${user.username} (${uid})`);
-    
+
+    console.log(`Cleared ${deletedPulls.count} HSR pulls for user ${user.username} (${userId})`);
+
     res.json({
       message: 'HSR pulls cleared successfully',
       deletedCount: deletedPulls.count

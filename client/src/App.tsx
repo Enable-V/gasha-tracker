@@ -35,7 +35,7 @@ function App() {
               <Statistics />
             </ProtectedRoute>
           } />
-          <Route path="/user/:uid" element={
+          <Route path="/profile" element={
             <ProtectedRoute>
               <UserProfile />
             </ProtectedRoute>

@@ -147,24 +147,24 @@ export class GenshinImportService {
   }
 
   // Импорт всех типов баннеров
-  async importGenshinData(url: string, uid: string): Promise<{
+  async importGenshinData(url: string, userId: string): Promise<{
     success: boolean
     message: string
     stats: any
   }> {
     try {
-      console.log('🎭 Starting Genshin Impact data import for UID:', uid)
-      
+      console.log('🎭 Starting Genshin Impact data import for user ID:', userId)
+
       // Track import start time to distinguish within-batch vs cross-import duplicates
       const importStartTime = new Date()
       console.log(`⏰ URL Import session started at: ${importStartTime.toISOString()}`)
-      
+
       const params = this.parseGenshinUrl(url)
       console.log('📊 Parsed URL params:', { ...params, authkey: 'hidden' })
 
-      // Находим пользователя
+      // Находим пользователя по ID
       const user = await prisma.user.findUnique({
-        where: { uid }
+        where: { id: parseInt(userId) }
       })
 
       if (!user) {
@@ -222,7 +222,7 @@ export class GenshinImportService {
                 if (isDuplicate) {
                   totalSkipped++;
                   console.log(`⏭️ Skipping duplicate: ${item.name} at ${item.time} (normalized: ${normalizedName})`);
-                  await logImport({ source: 'URL_IMPORT', action: 'SKIP_DUPLICATE', uid: user.uid, gachaId: `genshin_${item.id}`, itemName: item.name, bannerId: bannerId });
+                  await logImport({ source: 'URL_IMPORT', action: 'SKIP_DUPLICATE', uid: userId, gachaId: `genshin_${item.id}`, itemName: item.name, bannerId: bannerId });
                   continue;
                 }
 
@@ -244,11 +244,11 @@ export class GenshinImportService {
                 bannerImported++
                 totalImported++
                 // Log successful import
-                await logImport({ source: 'URL_IMPORT', action: 'IMPORTED', uid: user.uid, gachaId: `genshin_${item.id}`, itemName: item.name, bannerId: bannerId })
+                await logImport({ source: 'URL_IMPORT', action: 'IMPORTED', uid: userId, gachaId: `genshin_${item.id}`, itemName: item.name, bannerId: bannerId })
 
               } catch (error: any) {
                 console.error(`Error importing item ${item.id}:`, error.message)
-                await logImport({ source: 'URL_IMPORT', action: 'ERROR', uid: user.uid, itemId: item.id, error: error.message })
+                await logImport({ source: 'URL_IMPORT', action: 'ERROR', uid: userId, itemId: item.id, error: error.message })
                 continue
               }
             }
@@ -299,17 +299,17 @@ export class GenshinImportService {
   }
 
   // Получение статистики пользователя по Genshin Impact
-  async getGenshinStats(uid: string) {
+  async getGenshinStats(userId: string) {
     try {
       const user = await prisma.user.findUnique({
-        where: { uid }
+        where: { id: parseInt(userId) }
       })
 
       if (!user) {
         throw new Error('User not found')
       }
 
-      console.log('Fetching gacha pulls for UID:', uid)
+      console.log('Fetching gacha pulls for user ID:', userId)
       console.log('Found user:', user.id, `(${user.uid})`)
       console.log('Searching with where clause:', { userId: user.id })
 

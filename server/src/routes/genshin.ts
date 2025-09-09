@@ -25,18 +25,20 @@ const upload = multer({
   }
 })
 
-// Импорт данных Genshin Impact
-router.post('/import/:uid', authenticateToken, async (req: Request, res: Response) => {
+// Импорт данных Genshin Impact для текущего пользователя
+router.post('/import', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { uid } = req.params
     const { gachaUrl } = req.body
 
-    // Проверяем, что пользователь импортирует свои данные
-    if (req.user?.uid !== uid) {
-      return res.status(403).json({ error: 'Access denied' })
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
     }
 
-    console.log(`🌐 Starting Genshin URL import for UID: ${uid}`)
+    const userId = req.user.id;
+    console.log(`🌐 Starting Genshin URL import for user ID: ${userId}`)
     console.log(`🔗 URL: ${gachaUrl.substring(0, 50)}...`)
 
     if (!gachaUrl) {
@@ -44,7 +46,7 @@ router.post('/import/:uid', authenticateToken, async (req: Request, res: Respons
     }
 
     console.log(`🚀 Starting Genshin data import process...`)
-    const result = await genshinImportService.importGenshinData(gachaUrl, uid)
+    const result = await genshinImportService.importGenshinData(gachaUrl, userId.toString())
 
     if (result.success) {
       res.json({
@@ -63,17 +65,18 @@ router.post('/import/:uid', authenticateToken, async (req: Request, res: Respons
   }
 })
 
-// Получение статистики пользователя по Genshin Impact
-router.get('/stats/:uid', authenticateToken, async (req: Request, res: Response) => {
+// Получение статистики текущего пользователя по Genshin Impact
+router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { uid } = req.params
-
-    // Проверяем, что пользователь запрашивает свою статистику
-    if (req.user?.uid !== uid) {
-      return res.status(403).json({ error: 'Access denied' })
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
     }
 
-    const stats = await genshinImportService.getGenshinStats(uid)
+    const userId = req.user.id;
+        const stats = await genshinImportService.getGenshinStats(userId.toString())
     res.json(stats)
 
   } catch (error: any) {
@@ -107,17 +110,18 @@ router.post('/get-url', authenticateToken, async (req: Request, res: Response) =
   }
 })
 
-// Очистка всех круток Genshin Impact для пользователя
-router.delete('/clear-pulls/:uid', authenticateToken, requireOwnership, async (req: Request, res: Response) => {
+// Очистка всех круток Genshin Impact для текущего пользователя
+router.delete('/clear-pulls', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { uid } = req.params
-
-    // Проверяем, что пользователь запрашивает свою статистику
-    if (req.user?.uid !== uid) {
-      return res.status(403).json({ error: 'Access denied' })
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
     }
 
     const user = req.user!
+    const userId = req.user.id;
 
     // Удаляем все крутки Genshin для пользователя
     const deleteResult = await prisma.gachaPull.deleteMany({
@@ -135,7 +139,7 @@ router.delete('/clear-pulls/:uid', authenticateToken, requireOwnership, async (r
       }
     })
 
-    console.log(`Cleared ${deleteResult.count} Genshin pulls for user ${uid}`)
+    console.log(`Cleared ${deleteResult.count} Genshin pulls for user ${userId}`)
     res.json({
       message: `Successfully cleared ${deleteResult.count} Genshin Impact pulls`,
       deletedCount: deleteResult.count
@@ -147,21 +151,22 @@ router.delete('/clear-pulls/:uid', authenticateToken, requireOwnership, async (r
   }
 })
 
-// Импорт данных Genshin Impact из JSON файла (paimon-moe формат)
-router.post('/import/json/:uid', authenticateToken, requireOwnership, upload.single('gachaFile'), async (req: Request, res: Response) => {
+// Импорт данных Genshin Impact из JSON файла (paimon-moe формат) для текущего пользователя
+router.post('/import/json', authenticateToken, upload.single('gachaFile'), async (req: Request, res: Response) => {
   try {
-    const { uid } = req.params
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' })
     }
 
-    // Проверяем, что пользователь импортирует свои данные
-    if (req.user?.uid !== uid) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
-
     const user = req.user!
+    const userId = req.user.id;
 
     let jsonData
     try {
@@ -170,7 +175,7 @@ router.post('/import/json/:uid', authenticateToken, requireOwnership, upload.sin
       return res.status(400).json({ error: 'Invalid JSON format' })
     }
 
-    console.log(`📁 Processing paimon-moe Genshin JSON file for UID: ${uid}`)
+    console.log(`📁 Processing paimon-moe Genshin JSON file for user ID: ${userId}`)
     console.log(`🔍 Detected paimon-moe format, starting data conversion...`)
 
     // Проверяем формат файла
@@ -178,10 +183,10 @@ router.post('/import/json/:uid', authenticateToken, requireOwnership, upload.sin
       return res.status(400).json({ error: 'Invalid paimon-moe format. Please upload a valid paimon-moe JSON file.' })
     }
 
-    console.log(`🚀 Processing paimon-moe JSON data for UID: ${uid}`)
+    console.log(`🚀 Processing paimon-moe JSON data for user ID: ${userId}`)
 
     // Обрабатываем данные в формате paimon-moe
-    const result = await processPaimonMoeData(prisma, user.id, user.uid, jsonData)
+    const result = await processPaimonMoeData(prisma, user.id, userId.toString(), jsonData)
 
     res.json(result)
 

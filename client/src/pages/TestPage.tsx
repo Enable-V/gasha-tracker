@@ -28,12 +28,10 @@ const TestPage = () => {
     }
   }
 
-  const loadGachaData = async (uid: string) => {
-    if (!uid) return
-    
+  const loadGachaData = async () => {
     setLoading(true)
     try {
-      const response = await axios.get(`/api/gacha/user/${uid}`)
+      const response = await axios.get(`/api/gacha/user`)
       setGachaData(response.data)
     } catch (error) {
       console.error('Error loading gacha data:', error)
@@ -43,9 +41,8 @@ const TestPage = () => {
     }
   }
 
-  const handleUserChange = (uid: string) => {
-    setSelectedUser(uid)
-    loadGachaData(uid)
+  const handleUserChange = () => {
+    loadGachaData()
   }
 
   return (
@@ -57,7 +54,7 @@ const TestPage = () => {
         <h2 className="text-xl font-bold text-white mb-4">👤 Select User</h2>
         <select 
           value={selectedUser} 
-          onChange={(e) => handleUserChange(e.target.value)}
+          onChange={() => handleUserChange()}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-hsr-gold"
         >
           <option value="">Select a user...</option>

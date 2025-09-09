@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    uid: '',
+    username: '',
     password: ''
   })
   const [error, setError] = useState('')
@@ -18,7 +18,7 @@ const Login = () => {
     setLoading(true)
 
     try {
-      await login(formData.uid, formData.password)
+      await login(formData.username, formData.password)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Ошибка входа в систему')
     } finally {
@@ -49,18 +49,18 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="uid" className="block text-sm font-medium text-gray-300 mb-2">
-              UID игрока
+            <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+              Имя пользователя или Email
             </label>
             <input
               type="text"
-              id="uid"
-              name="uid"
+              id="username"
+              name="username"
               required
-              value={formData.uid}
+              value={formData.username}
               onChange={handleChange}
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold focus:ring-1 focus:ring-hsr-gold"
-              placeholder="Введите ваш UID"
+              placeholder="Введите имя пользователя или email"
             />
           </div>
 

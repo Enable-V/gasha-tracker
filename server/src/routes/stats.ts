@@ -19,22 +19,24 @@ declare global {
 const prisma = new PrismaClient()
 const router = Router()
 
-// Получение статистики пользователя
-router.get('/:uid', authenticateToken, async (req: Request, res: Response) => {
+// Получение статистики текущего пользователя
+router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { uid } = req.params
-
-    // Проверяем, что пользователь запрашивает свою статистику
-    if (req.user?.uid !== uid) {
-      return res.status(403).json({ error: 'Access denied' })
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
     }
 
+    const userId = req.user.id;
+
     const user = await prisma.user.findUnique({
-      where: { uid }
+      where: { id: userId }
     })
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' })
+      return res.status(404).json({ error: 'User not found' });
     }
 
     // Получаем статистику по баннерам
@@ -85,8 +87,10 @@ router.get('/:uid', authenticateToken, async (req: Request, res: Response) => {
 
     res.json({
       user: {
+        id: user.id,
         uid: user.uid,
-        username: user.username
+        username: user.username,
+        email: user.email
       },
       stats: {
         totalPulls,
@@ -103,18 +107,21 @@ router.get('/:uid', authenticateToken, async (req: Request, res: Response) => {
   }
 })
 
-// Получение детальной статистики по баннеру
-router.get('/:uid/banner/:bannerId', authenticateToken, async (req: Request, res: Response) => {
+// Получение детальной статистики по баннеру для текущего пользователя
+router.get('/banner/:bannerId', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { uid, bannerId } = req.params
-
-    // Проверяем, что пользователь запрашивает свою статистику
-    if (req.user?.uid !== uid) {
-      return res.status(403).json({ error: 'Access denied' })
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
     }
 
+    const { bannerId } = req.params;
+    const userId = req.user.id;
+
     const user = await prisma.user.findUnique({
-      where: { uid }
+      where: { id: userId }
     })
 
     if (!user) {

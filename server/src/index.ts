@@ -13,6 +13,7 @@ import statsRoutes from './routes/stats.js';
 import uploadRoutes from './routes/upload.js';
 import testRoutes from './routes/test.js';
 import authRoutes from './routes/auth.js';
+import itemRoutes from './routes/items.js';
 import { bannerRouter } from './routes/banners.js';
 import { bannerImageService } from './services/bannerImageService.js';
 
@@ -73,6 +74,7 @@ app.use('/api/genshin', genshinRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/test', testRoutes);
+app.use('/api/items', itemRoutes);
 app.use('/api/banners', bannerRouter);
 
 // Health check

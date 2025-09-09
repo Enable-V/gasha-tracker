@@ -61,7 +61,7 @@ const Statistics = () => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/stats/${user.uid}`, {
+      const response = await fetch(`/api/stats/`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -81,11 +81,11 @@ const Statistics = () => {
   }
 
   const fetchBannerDetail = async (bannerId: string) => {
-    if (!user?.uid) return
+    if (!user) return
 
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/stats/${user.uid}/banner/${bannerId}`, {
+      const response = await fetch(`/api/stats/banner/${bannerId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

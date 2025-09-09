@@ -8,7 +8,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-i
 export interface AuthRequest extends Request {
   user?: {
     id: number
-    uid: string
     username: string
     email?: string
   }
@@ -49,7 +48,6 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
 
     req.user = {
       id: user.id,
-      uid: user.uid,
       username: user.username,
       email: user.email || undefined
     }
@@ -86,7 +84,6 @@ export const authenticateOptional = async (req: AuthRequest, res: Response, next
     if (user && user.isActive) {
       req.user = {
         id: user.id,
-        uid: user.uid,
         username: user.username,
         email: user.email || undefined
       }
@@ -99,20 +96,20 @@ export const authenticateOptional = async (req: AuthRequest, res: Response, next
 }
 
 export const requireOwnership = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const { uid } = req.params
-  
+  const { userId } = req.params
+
   if (!req.user) {
-    return res.status(401).json({ 
+    return res.status(401).json({
       error: 'Authentication required',
-      message: 'Требуется аутентификация' 
+      message: 'Требуется аутентификация'
     })
   }
 
   // Пользователь может получать доступ только к своим данным
-  if (req.user.uid !== uid) {
-    return res.status(403).json({ 
+  if (req.user.id !== parseInt(userId)) {
+    return res.status(403).json({
       error: 'Access denied',
-      message: 'Доступ запрещен. Вы можете просматривать только свои данные.' 
+      message: 'Доступ запрещен. Вы можете просматривать только свои данные.'
     })
   }
 
