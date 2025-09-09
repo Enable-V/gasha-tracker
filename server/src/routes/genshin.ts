@@ -4,6 +4,7 @@ import { genshinImportService } from '../services/genshinImportService'
 import { authenticateToken, requireOwnership } from '../middleware/auth'
 import { PrismaClient } from '@prisma/client'
 import { logImport } from '../utils/importLogger'
+import { normalizeItemName, isDuplicatePullInDB } from '../utils/normalizeUtils'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -236,6 +237,10 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
   let skippedCount = 0
   let errorCount = 0
 
+  // Track import start time to distinguish within-batch vs cross-import duplicates
+  const importStartTime = new Date()
+  console.log(`⏰ Import session started at: ${importStartTime.toISOString()}`)
+
   // Check if data is wrapped in 'default' key
   const actualData = jsonData['default'] || jsonData;
   console.log(`📦 Processing data ${jsonData['default'] ? 'from' : 'without'} 'default' wrapper`);
@@ -342,22 +347,25 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
       console.log(`🔍 Processing pull: ${pull.name} at ${pull.time}`);
       console.log(`📊 Using banner: ${pull.gacha_type} (${pull.banner_name})`);
 
-      // Проверяем, существует ли уже эта крутка (более точная проверка дубликатов)
-      const existingPull = await prisma.gachaPull.findFirst({
-        where: {
-          itemName: pull.name,
-          time: new Date(pull.time),
-          bannerId: pull.gacha_type,
-          userId: userId,
-          game: 'GENSHIN'
-        }
-      })
-
-      if (existingPull) {
-        console.log(`⏭️ Skipping existing pull: ${pull.name} at ${pull.time} (duplicate found)`);
-        skippedCount++
-        await logImport({ source: 'JSON_IMPORT', action: 'SKIP_DUPLICATE', uid: userId, gachaId: pull.id, itemName: pull.name, bannerId: pull.gacha_type })
-        continue
+      // Проверяем дубликаты: точное совпадение нормализованного имени И времени
+      // Только из ПРЕДЫДУЩИХ импортов, не из текущего (для обработки 10-pull батчей)
+      const normalizedName = normalizeItemName(pull.name);
+      const pullTime = new Date(pull.time);
+      
+      const isDuplicate = await isDuplicatePullInDB(
+        prisma, 
+        userId, 
+        normalizedName, 
+        pull.gacha_type, 
+        pullTime, 
+        importStartTime // Передаем время начала импорта
+      );
+      
+      if (isDuplicate) {
+        console.log(`⏭️ Skipping duplicate pull: ${pull.name} at ${pull.time} (normalized: ${normalizedName})`);
+        skippedCount++;
+        await logImport({ source: 'JSON_IMPORT', action: 'SKIP_DUPLICATE', uid: userId, gachaId: `genshin_${pull.id}`, itemName: pull.name, bannerId: pull.gacha_type });
+        continue;
       }
 
       console.log(`✅ Pull ${pull.name} at ${pull.time} passed validation, proceeding with import`);
@@ -404,13 +412,13 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
         pityCount++
       }
 
-      // Создаем запись крутки
+      // Создаем запись крутки (сохраняем нормализованное имя для консистентности)
       await prisma.gachaPull.create({
         data: {
           userId,
           bannerId: pull.gacha_type,
-          gachaId: pull.id, // Используем уникальный ID
-          itemName: pull.name,
+          gachaId: `genshin_${pull.id}`, // Унифицированный ID
+          itemName: normalizeItemName(pull.name), // Нормализуем имя при сохранении
           itemType: pull.item_type,
           rankType: pull.rank_type,
           time: new Date(pull.time),
@@ -420,7 +428,7 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
         }
       })
 
-  await logImport({ source: 'JSON_IMPORT', action: 'IMPORTED', uid: userId, gachaId: pull.id, itemName: pull.name, bannerId: pull.gacha_type })
+  await logImport({ source: 'JSON_IMPORT', action: 'IMPORTED', uid: userId, gachaId: `genshin_${pull.id}`, itemName: pull.name, bannerId: pull.gacha_type })
 
       console.log(`✅ Successfully imported pull: ${pull.name} at ${pull.time}`);
       importedCount++

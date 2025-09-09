@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import axios from 'axios'
 import { logger } from '../middleware/logger'
 import { logImport } from '../utils/importLogger'
+import { normalizeItemName, isDuplicatePullInDB } from '../utils/normalizeUtils'
 
 const prisma = new PrismaClient()
 
@@ -154,6 +155,10 @@ export class GenshinImportService {
     try {
       console.log('🎭 Starting Genshin Impact data import for UID:', uid)
       
+      // Track import start time to distinguish within-batch vs cross-import duplicates
+      const importStartTime = new Date()
+      console.log(`⏰ URL Import session started at: ${importStartTime.toISOString()}`)
+      
       const params = this.parseGenshinUrl(url)
       console.log('📊 Parsed URL params:', { ...params, authkey: 'hidden' })
 
@@ -199,28 +204,35 @@ export class GenshinImportService {
 
             for (const item of items) {
               try {
-                // Проверяем, существует ли уже эта крутка для этого пользователя
-                const existing = await prisma.gachaPull.findFirst({
-                  where: {
-                    gachaId: `genshin_${item.id}`,
-                    userId: user.id
-                  }
-                })
-
-                if (existing) {
-                  totalSkipped++
-                  // Log duplicate skip
-                  await logImport({ source: 'URL_IMPORT', action: 'SKIP_DUPLICATE', uid: user.uid, gachaId: `genshin_${item.id}`, itemName: item.name, gacha_type: gachaType })
-                  continue
+                // Проверяем дубликаты: точное совпадение нормализованного имени И времени
+                // Только из ПРЕДЫДУЩИХ импортов, не из текущего (для обработки 10-pull батчей)
+                const normalizedName = normalizeItemName(item.name);
+                const itemTime = new Date(item.time);
+                const bannerId = `genshin_${gachaType}`;
+                
+                const isDuplicate = await isDuplicatePullInDB(
+                  prisma, 
+                  user.id, 
+                  normalizedName, 
+                  bannerId, 
+                  itemTime, 
+                  importStartTime // Передаем время начала импорта
+                );
+                
+                if (isDuplicate) {
+                  totalSkipped++;
+                  console.log(`⏭️ Skipping duplicate: ${item.name} at ${item.time} (normalized: ${normalizedName})`);
+                  await logImport({ source: 'URL_IMPORT', action: 'SKIP_DUPLICATE', uid: user.uid, gachaId: `genshin_${item.id}`, itemName: item.name, bannerId: bannerId });
+                  continue;
                 }
 
-                // Создаем запись о крутке
+                // Создаем запись о крутке (сохраняем нормализованное имя для консистентности)
                 await prisma.gachaPull.create({
                   data: {
                     userId: user.id,
-                    bannerId: banner.bannerId,
+                    bannerId: bannerId,
                     gachaId: `genshin_${item.id}`,
-                    itemName: item.name,
+                    itemName: normalizeItemName(item.name), // Нормализуем имя при сохранении
                     itemType: item.item_type,
                     rankType: parseInt(item.rank_type),
                     time: new Date(item.time),
@@ -232,7 +244,7 @@ export class GenshinImportService {
                 bannerImported++
                 totalImported++
                 // Log successful import
-                await logImport({ source: 'URL_IMPORT', action: 'IMPORTED', uid: user.uid, gachaId: `genshin_${item.id}`, itemName: item.name, gacha_type: gachaType })
+                await logImport({ source: 'URL_IMPORT', action: 'IMPORTED', uid: user.uid, gachaId: `genshin_${item.id}`, itemName: item.name, bannerId: bannerId })
 
               } catch (error: any) {
                 console.error(`Error importing item ${item.id}:`, error.message)
