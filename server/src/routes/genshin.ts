@@ -181,7 +181,7 @@ router.post('/import/json/:uid', authenticateToken, requireOwnership, upload.sin
     console.log(`🚀 Processing paimon-moe JSON data for UID: ${uid}`)
 
     // Обрабатываем данные в формате paimon-moe
-    const result = await processPaimonMoeData(prisma, user.id, jsonData)
+    const result = await processPaimonMoeData(prisma, user.id, user.uid, jsonData)
 
     res.json(result)
 
@@ -232,7 +232,7 @@ function isPaimonMoeFormat(data: any): boolean {
 }
 
 // Функция для обработки данных в формате paimon-moe
-async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonData: any) {
+async function processPaimonMoeData(prisma: PrismaClient, userId: number, userUid: string, jsonData: any) {
   let importedCount = 0
   let skippedCount = 0
   let errorCount = 0
@@ -364,7 +364,7 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
       if (isDuplicate) {
         console.log(`⏭️ Skipping duplicate pull: ${pull.name} at ${pull.time} (normalized: ${normalizedName})`);
         skippedCount++;
-        await logImport({ source: 'JSON_IMPORT', action: 'SKIP_DUPLICATE', uid: userId, gachaId: `genshin_${pull.id}`, itemName: pull.name, bannerId: pull.gacha_type });
+        await logImport({ source: 'JSON_IMPORT', action: 'SKIP_DUPLICATE', uid: userUid, gachaId: `genshin_${pull.id}`, itemName: pull.name, bannerId: pull.gacha_type });
         continue;
       }
 
@@ -428,7 +428,7 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, jsonDa
         }
       })
 
-  await logImport({ source: 'JSON_IMPORT', action: 'IMPORTED', uid: userId, gachaId: `genshin_${pull.id}`, itemName: pull.name, bannerId: pull.gacha_type })
+  await logImport({ source: 'JSON_IMPORT', action: 'IMPORTED', uid: userUid, gachaId: `genshin_${pull.id}`, itemName: pull.name, bannerId: pull.gacha_type })
 
       console.log(`✅ Successfully imported pull: ${pull.name} at ${pull.time}`);
       importedCount++
