@@ -14,6 +14,18 @@ const Upload = () => {
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
 
+  // Новые состояния для прогресса
+  const [progress, setProgress] = useState(0)
+  const [currentStep, setCurrentStep] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+  const [progressStats, setProgressStats] = useState({
+    imported: 0,
+    skipped: 0,
+    errors: 0,
+    total: 0,
+    currentItem: ''
+  })
+
   // Автоматически используем UID аутентифицированного пользователя
   const uid = user?.uid || ''
 
@@ -27,15 +39,18 @@ const Upload = () => {
       setError(`Пожалуйста, введите ${selectedGame === 'HSR' ? 'HSR' : 'Genshin Impact'} URL`)
       return
     }
-    
+
     if (selectedMethod === 'file' && !selectedFile) {
       setError('Пожалуйста, выберите JSON файл')
       return
     }
-    
+
     setIsLoading(true)
+    setIsUploading(true)
     setError('')
     setResult(null)
+    setProgress(0)
+    setCurrentStep('Отправка файла на сервер...')
 
     try {
       if (selectedMethod === 'url') {
@@ -48,7 +63,71 @@ const Upload = () => {
           : { gachaUrl: url }
 
         const response = await axios.post(endpoint, payload)
-        setResult(response.data)
+
+        const uploadId = response.data.uploadId;
+
+        if (uploadId) {
+          // Начинаем отслеживать прогресс
+          const progressInterval = setInterval(async () => {
+            try {
+              const progressEndpoint = selectedGame === 'HSR'
+                ? `/api/upload/progress/${uploadId}`
+                : `/api/genshin/progress/${uploadId}`
+
+              const progressResponse = await axios.get(progressEndpoint)
+              const progressData = progressResponse.data
+
+              setProgress(progressData.progress)
+              setCurrentStep(progressData.message)
+              setProgressStats({
+                imported: progressData.imported || 0,
+                skipped: progressData.skipped || 0,
+                errors: progressData.errors || 0,
+                total: progressData.total || 0,
+                currentItem: progressData.currentItem || ''
+              })
+
+              if (progressData.completed) {
+                clearInterval(progressInterval)
+                
+                // Устанавливаем результат импорта для URL метода
+                setResult({
+                  message: `${selectedGame} импорт завершен`,
+                  imported: progressData.imported || 0,
+                  skipped: progressData.skipped || 0,
+                  errors: progressData.errors || 0,
+                  total: progressData.total || 0
+                })
+                
+                setTimeout(() => {
+                  setIsUploading(false)
+                  setProgress(0)
+                  setCurrentStep('')
+                  setProgressStats({
+                    imported: 0,
+                    skipped: 0,
+                    errors: 0,
+                    total: 0,
+                    currentItem: ''
+                  })
+                }, 2000)
+              }
+            } catch (error) {
+              console.error('Error getting progress:', error)
+            }
+          }, 200) // Уменьшаем интервал до 200мс для более плавного обновления
+
+          // Останавливаем отслеживание через 5 минут
+          setTimeout(() => {
+            clearInterval(progressInterval)
+          }, 300000)
+        } else {
+          setProgress(100)
+          setCurrentStep('Загрузка завершена!')
+        }
+
+        // Убираем немедленную установку результата для асинхронных операций
+        // setResult(response.data)
         setUrl('') // Очищаем URL после успешной загрузки
       } else if (selectedMethod === 'file') {
         const formData = new FormData()
@@ -63,12 +142,80 @@ const Upload = () => {
             'Content-Type': 'multipart/form-data'
           }
         })
-        setResult(response.data)
+
+        const uploadId = response.data.uploadId;
+
+        if (uploadId) {
+          // Начинаем отслеживать прогресс
+          const progressInterval = setInterval(async () => {
+            try {
+              const progressEndpoint = selectedGame === 'HSR'
+                ? `/api/upload/progress/${uploadId}`
+                : `/api/genshin/progress/${uploadId}`
+
+              const progressResponse = await axios.get(progressEndpoint)
+              const progressData = progressResponse.data
+
+              setProgress(progressData.progress)
+              setCurrentStep(progressData.message)
+              setProgressStats({
+                imported: progressData.imported || 0,
+                skipped: progressData.skipped || 0,
+                errors: progressData.errors || 0,
+                total: progressData.total || 0,
+                currentItem: progressData.currentItem || ''
+              })
+
+              if (progressData.completed) {
+                clearInterval(progressInterval)
+                
+                // Устанавливаем результат импорта для файлового метода
+                setResult({
+                  message: `${selectedGame} импорт завершен`,
+                  imported: progressData.imported || 0,
+                  skipped: progressData.skipped || 0,
+                  errors: progressData.errors || 0,
+                  total: progressData.total || 0
+                })
+                
+                setTimeout(() => {
+                  setIsUploading(false)
+                  setProgress(0)
+                  setCurrentStep('')
+                  setProgressStats({
+                    imported: 0,
+                    skipped: 0,
+                    errors: 0,
+                    total: 0,
+                    currentItem: ''
+                  })
+                }, 2000)
+              }
+            } catch (error) {
+              console.error('Error getting progress:', error)
+            }
+          }, 200) // Уменьшаем интервал до 200мс для более плавного обновления
+
+          // Останавливаем отслеживание через 5 минут
+          setTimeout(() => {
+            clearInterval(progressInterval)
+          }, 300000)
+        } else {
+          setProgress(100)
+          setCurrentStep('Файл успешно обработан!')
+        }
+
+        // Убираем немедленную установку результата для асинхронных операций
+        // setResult(response.data)
         setSelectedFile(null) // Очищаем файл после успешной загрузки
       }
+
     } catch (error: any) {
       console.error('Upload error:', error)
       setError(error.response?.data?.message || error.response?.data?.error || 'Ошибка загрузки данных')
+      setIsUploading(false)
+      setProgress(0)
+      setCurrentStep('')
     } finally {
       setIsLoading(false)
     }
@@ -292,6 +439,92 @@ const Upload = () => {
               'Загрузить данные'
             )}
           </button>
+
+          {/* Progress Component */}
+          {isUploading && (
+            <div className="mt-6 p-6 bg-gradient-to-r from-hsr-gold/10 to-blue-500/10 border border-hsr-gold/20 rounded-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className={`text-3xl ${selectedGame === 'HSR' ? 'animate-pulse text-hsr-gold' : 'animate-pulse text-blue-400'}`}>
+                    {selectedGame === 'HSR' ? '⭐' : '🌟'}
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold">
+                      {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'}
+                    </h3>
+                    <p className="text-gray-300 text-sm">{currentStep}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-2xl font-bold ${selectedGame === 'HSR' ? 'text-hsr-gold' : 'text-blue-400'}`}>
+                    {progress}%
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="relative mb-4">
+                <div className="w-full bg-white/10 rounded-full h-4 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ease-out ${
+                      selectedGame === 'HSR'
+                        ? 'bg-gradient-to-r from-hsr-gold to-yellow-400'
+                        : 'bg-gradient-to-r from-blue-500 to-cyan-400'
+                    }`}
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Detailed Progress Stats */}
+              {progressStats.total > 0 && (
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className={`text-lg font-bold ${selectedGame === 'HSR' ? 'text-green-400' : 'text-green-300'}`}>
+                      {progressStats.imported}
+                    </div>
+                    <div className="text-gray-400 text-xs">Импортировано</div>
+                  </div>
+                  <div className="text-center">
+                    <div className={`text-lg font-bold ${selectedGame === 'HSR' ? 'text-yellow-400' : 'text-yellow-300'}`}>
+                      {progressStats.skipped}
+                    </div>
+                    <div className="text-gray-400 text-xs">Пропущено</div>
+                  </div>
+                  {progressStats.errors > 0 && (
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-red-400">
+                        {progressStats.errors}
+                      </div>
+                      <div className="text-gray-400 text-xs">Ошибок</div>
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <div className={`text-lg font-bold ${selectedGame === 'HSR' ? 'text-hsr-gold' : 'text-blue-400'}`}>
+                      {progressStats.total}
+                    </div>
+                    <div className="text-gray-400 text-xs">Всего</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Current Item */}
+              {progressStats.currentItem && (
+                <div className="mb-4 p-3 bg-white/5 rounded-lg">
+                  <div className="text-gray-300 text-sm">
+                    <span className="font-medium">Текущий элемент:</span> {progressStats.currentItem}
+                  </div>
+                </div>
+              )}
+
+              {/* Status Message */}
+              <div className="text-center">
+                <p className={`text-sm ${selectedGame === 'HSR' ? 'text-hsr-gold' : 'text-blue-300'}`}>
+                  {progress === 100 ? '✅ Загрузка завершена!' : '⏳ Обработка данных...'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Instructions */}

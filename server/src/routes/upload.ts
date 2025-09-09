@@ -23,6 +23,18 @@ const upload = multer({
   }
 });
 
+// Глобальный объект для отслеживания прогресса загрузки
+const uploadProgress: { [key: string]: {
+  progress: number,
+  message: string,
+  completed: boolean,
+  imported: number,
+  skipped: number,
+  errors: number,
+  total: number,
+  currentItem?: string
+} } = {}
+
 // Upload gacha data from JSON file for current user (требует аутентификации)
 router.post('/json', authenticateToken, upload.single('gachaFile'), async (req: AuthRequest, res: Response) => {
   try {
@@ -40,6 +52,18 @@ router.post('/json', authenticateToken, upload.single('gachaFile'), async (req: 
     // Пользователь уже аутентифицирован через middleware
     const user = req.user!;
     const userId = req.user.id;
+    const uploadId = `${userId}_${Date.now()}`;
+
+    // Инициализируем прогресс
+    uploadProgress[uploadId] = {
+      progress: 0,
+      message: 'Начинаем обработку файла...',
+      completed: false,
+      imported: 0,
+      skipped: 0,
+      errors: 0,
+      total: 0
+    };
 
     let gachaData;
     try {
@@ -65,14 +89,63 @@ router.post('/json', authenticateToken, upload.single('gachaFile'), async (req: 
     if (isPomMoeFormat(gachaData)) {
       console.log(`✅ Pom-moe format detected successfully!`);
       console.log(`🚀 Processing pom-moe HSR data for user ID: ${userId}`);
-      result = await processPomMoeData(prisma, user.id, gachaData);
+
+      // Сделаем операцию асинхронной
+      uploadProgress[uploadId] = {
+        progress: 0,
+        message: 'Начинаем обработку JSON файла...',
+        completed: false,
+        imported: 0,
+        skipped: 0,
+        errors: 0,
+        total: 0
+      };
+
+      // Запускаем асинхронную обработку
+      processPomMoeData(prisma, user.id, gachaData, uploadId).then((result) => {
+        // Помечаем как завершенное
+        uploadProgress[uploadId] = {
+          progress: 100,
+          message: 'Обработка завершена!',
+          completed: true,
+          imported: result.imported || 0,
+          skipped: result.skipped || 0,
+          errors: result.errors || 0,
+          total: result.total || 0
+        };
+      }).catch((error) => {
+        uploadProgress[uploadId] = {
+          progress: 100,
+          message: 'Ошибка при обработке данных',
+          completed: true,
+          imported: 0,
+          skipped: 0,
+          errors: 1,
+          total: 0
+        };
+      });
+
+      // Возвращаем сразу uploadId
+      res.json({
+        message: 'Upload started',
+        uploadId
+      });
+      return;
     } else {
       console.log(`❌ Pom-moe format NOT detected!`);
       console.log(`🔍 Available keys: ${Object.keys(gachaData).join(', ')}`);
       return res.status(400).json({ error: 'Unsupported format. Please upload a valid pom-moe JSON file for HSR.' });
     }
 
-    res.json(result);
+    // Очищаем прогресс через 30 секунд
+    setTimeout(() => {
+      delete uploadProgress[uploadId];
+    }, 30000);
+
+    res.json({
+      ...result,
+      uploadId
+    });
   } catch (error) {
     console.error('Error uploading gacha data:', error);
     res.status(500).json({ error: 'Failed to upload gacha data' });
@@ -102,6 +175,25 @@ router.post('/url', authenticateToken, async (req: AuthRequest, res: Response) =
       return res.status(400).json({ error: 'URL is required' });
     }
 
+    // Генерируем уникальный ID для отслеживания прогресса
+    const uploadId = `hsr_url_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    // Инициализируем прогресс
+    uploadProgress[uploadId] = {
+      progress: 0,
+      message: 'Начинаем импорт данных...',
+      completed: false,
+      imported: 0,
+      skipped: 0,
+      errors: 0,
+      total: 0
+    };
+
+    // Автоматическая очистка прогресса через 30 секунд
+    setTimeout(() => {
+      delete uploadProgress[uploadId];
+    }, 30000);
+
     // Пользователь уже аутентифицирован через middleware
     const user = req.user!;
 
@@ -115,20 +207,69 @@ router.post('/url', authenticateToken, async (req: AuthRequest, res: Response) =
 
     console.log(`Extracted authkey for user ID: ${userId}`);
 
-    // Fetch gacha data from HSR API
-    const gachaData = await fetchGachaDataFromAPI(authkey, url);
-    console.log(`Fetched ${gachaData.length} gacha records for user ID: ${userId}`);
+    // Создаем callback для обновления прогресса в реальном времени
+    const onFetchProgress = (progress: number, message: string, imported?: number, skipped?: number, errors?: number, total?: number, currentItem?: string) => {
+      uploadProgress[uploadId] = {
+        progress,
+        message,
+        completed: false,
+        imported: imported || 0,
+        skipped: skipped || 0,
+        errors: errors || 0,
+        total: total || 0,
+        currentItem
+      };
+    };
 
-    if (gachaData.length === 0) {
-      return res.status(400).json({ error: 'No gacha data found. Please make sure you have gacha history in the game.' });
-    }
+    // Fetch gacha data from HSR API with progress updates
+    fetchGachaDataFromAPI(authkey, url, uploadId).then(gachaData => {
+      console.log(`Fetched ${gachaData.length} gacha records for user ID: ${userId}`);
 
-    // Process gacha data
-    const result = await processGachaData(prisma, user.id, gachaData);
+      if (gachaData.length === 0) {
+        uploadProgress[uploadId] = {
+          progress: 0,
+          message: 'Нет данных для импорта',
+          completed: true,
+          imported: 0,
+          skipped: 0,
+          errors: 1,
+          total: 0
+        };
+        return;
+      }
 
-    console.log(`Import completed for user ID: ${userId}. Imported: ${result.imported}, Skipped: ${result.skipped}`);
+      // Теперь обрабатываем данные
+      return processGachaData(prisma, user.id, gachaData, uploadId);
+    }).then((result) => {
+      // Помечаем как завершенное
+      uploadProgress[uploadId] = {
+        progress: 100,
+        message: 'Импорт завершен!',
+        completed: true,
+        imported: result.imported || 0,
+        skipped: result.skipped || 0,
+        errors: result.errors || 0,
+        total: result.total || 0
+      };
+    }).catch((error) => {
+      console.error('Error processing gacha data:', error);
+      uploadProgress[uploadId] = {
+        progress: 0,
+        message: 'Ошибка при обработке данных',
+        completed: true,
+        imported: 0,
+        skipped: 0,
+        errors: 1,
+        total: 0
+      };
+    });
 
-    res.json(result);
+    console.log(`Import started for user ID: ${userId}`);
+
+    res.json({
+      message: 'Import started successfully',
+      uploadId
+    });
   } catch (error: any) {
     console.error('Error fetching gacha data from URL:', error);
     res.status(500).json({
@@ -159,7 +300,7 @@ function getBaseURL(url: string): string {
 }
 
 // Helper function to fetch gacha data from HSR API
-async function fetchGachaDataFromAPI(authkey: string, originalUrl: string): Promise<any[]> {
+async function fetchGachaDataFromAPI(authkey: string, originalUrl: string, uploadId: string): Promise<any[]> {
   const axios = await import('axios');
   const allPulls: any[] = [];
   
@@ -172,11 +313,21 @@ async function fetchGachaDataFromAPI(authkey: string, originalUrl: string): Prom
   ];
   
   const baseURL = getBaseURL(originalUrl);
+  let totalBannersProcessed = 0;
+  const totalBanners = gachaTypes.length;
   
   for (const gachaType of gachaTypes) {
     let page = 1;
     let endId = '0';
     let hasMore = true;
+    let bannerProgress = 0;
+    
+    uploadProgress[uploadId] = {
+      ...uploadProgress[uploadId],
+      progress: Math.round((totalBannersProcessed / totalBanners) * 100),
+      message: `Загружаем ${gachaType.name}...`,
+      currentItem: `Баннер: ${gachaType.name}`
+    };
     
     while (hasMore) {
       try {
@@ -189,6 +340,14 @@ async function fetchGachaDataFromAPI(authkey: string, originalUrl: string): Prom
         requestUrl.searchParams.set('lang', 'en');
 
         console.log(`Making request to banner ${gachaType.id} (${gachaType.name}), page ${page}, end_id: ${endId}`);
+        
+        uploadProgress[uploadId] = {
+          ...uploadProgress[uploadId],
+          progress: Math.round(((totalBannersProcessed + bannerProgress) / totalBanners) * 100),
+          message: `${gachaType.name}: страница ${page}...`,
+          total: allPulls.length,
+          currentItem: `Получение данных со страницы ${page}`
+        };
         
         const response = await axios.default.get(requestUrl.toString(), {
           timeout: 15000,
@@ -233,6 +392,14 @@ async function fetchGachaDataFromAPI(authkey: string, originalUrl: string): Prom
           
           console.log(`Added ${pulls.length} pulls, total so far: ${allPulls.length}`);
           
+          uploadProgress[uploadId] = {
+            ...uploadProgress[uploadId],
+            progress: Math.round(((totalBannersProcessed + bannerProgress) / totalBanners) * 100),
+            message: `${gachaType.name}: получено ${pulls.length} круток`,
+            total: allPulls.length,
+            currentItem: `Всего круток получено: ${allPulls.length}`
+          };
+          
           // Устанавливаем end_id для следующего запроса (последний элемент списка)
           if (pulls.length > 0) {
             endId = pulls[pulls.length - 1].id;
@@ -245,10 +412,20 @@ async function fetchGachaDataFromAPI(authkey: string, originalUrl: string): Prom
             hasMore = false;
           } else {
             page++;
+            bannerProgress = 0.8; // 80% прогресса для этого баннера
           }
           
           // Увеличиваем задержку для избежания rate limiting
           console.log(`Waiting 2 seconds before next request...`);
+          
+          uploadProgress[uploadId] = {
+            ...uploadProgress[uploadId],
+            progress: Math.round(((totalBannersProcessed + bannerProgress) / totalBanners) * 100),
+            message: `${gachaType.name}: ожидание 2 сек...`,
+            total: allPulls.length,
+            currentItem: `Пауза между запросами`
+          };
+          
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       } catch (error: any) {
@@ -260,13 +437,22 @@ async function fetchGachaDataFromAPI(authkey: string, originalUrl: string): Prom
         hasMore = false;
       }
     }
+    
+    totalBannersProcessed++;
+    uploadProgress[uploadId] = {
+      ...uploadProgress[uploadId],
+      progress: Math.round((totalBannersProcessed / totalBanners) * 100),
+      message: `${gachaType.name} завершен`,
+      total: allPulls.length,
+      currentItem: `Баннер ${gachaType.name} обработан`
+    };
   }
   
   return allPulls;
 }
 
 // Helper function to process gacha data
-async function processGachaData(prisma: any, userId: number, gachaData: any[]): Promise<any> {
+async function processGachaData(prisma: any, userId: number, gachaData: any[], uploadId: string): Promise<any> {
   let importedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
@@ -274,7 +460,32 @@ async function processGachaData(prisma: any, userId: number, gachaData: any[]): 
   // Сортируем данные по времени
   const sortedData = gachaData.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
   
-  for (const pull of sortedData) {
+  const totalPulls = sortedData.length;
+  console.log(`📊 Starting HSR URL import: ${totalPulls} pulls to process`);
+
+  // Начальный прогресс
+  uploadProgress[uploadId] = {
+    ...uploadProgress[uploadId],
+    progress: 0,
+    message: 'Начинаем обработку данных...'
+  };
+  
+  for (let i = 0; i < sortedData.length; i++) {
+    const pull = sortedData[i];
+
+    // Обновляем прогресс
+    const progress = Math.round(((i + 1) / totalPulls) * 100);
+    uploadProgress[uploadId] = {
+      ...uploadProgress[uploadId],
+      progress,
+      message: `Обработка крутки ${i + 1}/${totalPulls}...`,
+      imported: importedCount,
+      skipped: skippedCount,
+      errors: errorCount,
+      total: totalPulls,
+      currentItem: pull.name
+    };
+
     try {
       // Проверяем, существует ли уже эта крутка для этого пользователя
       const existingPull = await prisma.gachaPull.findFirst({
@@ -361,6 +572,17 @@ async function processGachaData(prisma: any, userId: number, gachaData: any[]): 
   // Update user statistics
   await updateUserStats(prisma, userId);
   
+  // Финальный прогресс
+  uploadProgress[uploadId] = {
+    ...uploadProgress[uploadId],
+    progress: 100,
+    message: 'Обработка завершена!',
+    imported: importedCount,
+    skipped: skippedCount,
+    errors: errorCount,
+    total: totalPulls
+  };
+
   return {
     message: 'Gacha data processed successfully',
     imported: importedCount,
@@ -443,8 +665,6 @@ function getBannerIdsByType(bannerType: string): string[] {
   }
 }
 
-export default router;
-
 // Helper function to detect pom-moe format
 function isPomMoeFormat(data: any): boolean {
   console.log(`🔍 Checking pom-moe format detection...`);
@@ -492,7 +712,7 @@ function isPomMoeFormat(data: any): boolean {
 }
 
 // Helper function to process pom-moe HSR data
-async function processPomMoeData(prisma: any, userId: number, jsonData: any): Promise<any> {
+async function processPomMoeData(prisma: any, userId: number, jsonData: any, uploadId: string): Promise<any> {
   let importedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
@@ -557,10 +777,29 @@ async function processPomMoeData(prisma: any, userId: number, jsonData: any): Pr
   for (let i = 0; i < allPulls.length; i++) {
     const pull = allPulls[i];
 
+    // Обновляем прогресс для каждой крутки (но не чаще чем раз в 50мс)
+    const progress = Math.round(((i + 1) / totalPulls) * 100);
+    const message = `Обработка крутки ${i + 1} из ${totalPulls}`;
+    
+    uploadProgress[uploadId] = {
+      ...uploadProgress[uploadId],
+      progress,
+      message,
+      imported: importedCount,
+      skipped: skippedCount,
+      errors: errorCount,
+      total: totalPulls,
+      currentItem: pull.name
+    };
+
     // Log progress every 10% or every 100 pulls
     if (i % Math.max(1, Math.floor(totalPulls / 10)) === 0 || i % 100 === 0) {
-      const progress = ((i / totalPulls) * 100).toFixed(1);
       console.log(`🔄 HSR Import Progress: ${i}/${totalPulls} pulls (${progress}%) - Imported: ${importedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+    }
+
+    // Небольшая задержка для стабильного обновления прогресса
+    if (i % 10 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
 
     try {
@@ -670,3 +909,30 @@ async function processPomMoeData(prisma: any, userId: number, jsonData: any): Pr
     total: allPulls.length
   };
 }
+
+// Get upload progress
+router.get('/progress/:uploadId', authenticateToken, (req: AuthRequest, res: Response) => {
+  try {
+    const { uploadId } = req.params;
+
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Требуется аутентификация'
+      });
+    }
+
+    const progress = uploadProgress[uploadId];
+
+    if (!progress) {
+      return res.status(404).json({ error: 'Upload not found' });
+    }
+
+    res.json(progress);
+  } catch (error) {
+    console.error('Error getting upload progress:', error);
+    res.status(500).json({ error: 'Failed to get upload progress' });
+  }
+});
+
+export default router;

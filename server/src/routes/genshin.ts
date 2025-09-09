@@ -9,6 +9,18 @@ import { normalizeItemName, isDuplicatePullInDB } from '../utils/normalizeUtils'
 const router = Router()
 const prisma = new PrismaClient()
 
+// Глобальный объект для отслеживания прогресса загрузки Genshin
+const genshinUploadProgress: { [key: string]: {
+  progress: number,
+  message: string,
+  completed: boolean,
+  imported: number,
+  skipped: number,
+  errors: number,
+  total: number,
+  currentItem?: string
+} } = {}
+
 // Configure multer for file uploads
 const storage = multer.memoryStorage()
 const upload = multer({ 
@@ -45,24 +57,84 @@ router.post('/import', authenticateToken, async (req: Request, res: Response) =>
       return res.status(400).json({ error: 'Genshin Impact gacha URL is required' })
     }
 
-    console.log(`🚀 Starting Genshin data import process...`)
-    const result = await genshinImportService.importGenshinData(gachaUrl, userId.toString())
+    // Генерируем уникальный ID для отслеживания прогресса
+    const uploadId = `genshin_url_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    if (result.success) {
-      res.json({
-        message: result.message,
-        stats: result.stats
-      })
-    } else {
-      res.status(400).json({
-        error: result.message
-      })
+    // Инициализируем прогресс
+    genshinUploadProgress[uploadId] = {
+      progress: 0,
+      message: 'Начинаем импорт данных...',
+      completed: false,
+      imported: 0,
+      skipped: 0,
+      errors: 0,
+      total: 0
     }
+
+    // Автоматическая очистка прогресса через 30 секунд
+    setTimeout(() => {
+      delete genshinUploadProgress[uploadId]
+    }, 30000)
+
+    console.log(`🚀 Starting Genshin data import process...`)
+    
+    // Запускаем процесс в фоновом режиме
+    genshinImportService.importGenshinData(gachaUrl, userId.toString(), (progress: number, message: string, imported?: number, skipped?: number, errors?: number, total?: number, currentItem?: string) => {
+      genshinUploadProgress[uploadId] = {
+        progress,
+        message,
+        completed: false,
+        imported: imported || 0,
+        skipped: skipped || 0,
+        errors: errors || 0,
+        total: total || 0,
+        currentItem
+      }
+    }).then((result) => {
+      // Завершаем прогресс
+      genshinUploadProgress[uploadId] = {
+        progress: 100,
+        message: 'Импорт завершен!',
+        completed: true,
+        imported: result.stats?.totalImported || 0,
+        skipped: result.stats?.totalSkipped || 0,
+        errors: 0,
+        total: (result.stats?.totalImported || 0) + (result.stats?.totalSkipped || 0)
+      }
+    }).catch((error) => {
+      console.error('Error importing Genshin data:', error);
+      genshinUploadProgress[uploadId] = {
+        progress: 0,
+        message: 'Ошибка при импорте данных',
+        completed: true,
+        imported: 0,
+        skipped: 0,
+        errors: 1,
+        total: 0
+      };
+    });
+
+    res.json({
+      message: 'Import started successfully',
+      uploadId
+    })
 
   } catch (error: any) {
     console.error('Error importing Genshin data:', error)
     res.status(500).json({ error: 'Failed to import Genshin data' })
   }
+})
+
+// Получение прогресса загрузки Genshin
+router.get('/progress/:uploadId', authenticateToken, (req: Request, res: Response) => {
+  const { uploadId } = req.params
+  const progress = genshinUploadProgress[uploadId]
+
+  if (!progress) {
+    return res.status(404).json({ error: 'Upload not found' })
+  }
+
+  res.json(progress)
 })
 
 // Получение статистики текущего пользователя по Genshin Impact
@@ -183,12 +255,58 @@ router.post('/import/json', authenticateToken, upload.single('gachaFile'), async
       return res.status(400).json({ error: 'Invalid paimon-moe format. Please upload a valid paimon-moe JSON file.' })
     }
 
+    // Генерируем уникальный ID для отслеживания прогресса
+    const uploadId = `genshin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    // Инициализируем прогресс
+    genshinUploadProgress[uploadId] = {
+      progress: 0,
+      message: 'Начинаем обработку файла...',
+      completed: false,
+      imported: 0,
+      skipped: 0,
+      errors: 0,
+      total: 0
+    }
+
+    // Автоматическая очистка прогресса через 30 секунд
+    setTimeout(() => {
+      delete genshinUploadProgress[uploadId]
+    }, 30000)
+
     console.log(`🚀 Processing paimon-moe JSON data for user ID: ${userId}`)
 
-    // Обрабатываем данные в формате paimon-moe
-    const result = await processPaimonMoeData(prisma, user.id, userId.toString(), jsonData)
+    // Запускаем асинхронную обработку
+    processPaimonMoeData(prisma, user.id, userId.toString(), jsonData, uploadId).then((result) => {
+      // Завершаем прогресс
+      genshinUploadProgress[uploadId] = {
+        progress: 100,
+        message: 'Обработка завершена!',
+        completed: true,
+        imported: result.imported || 0,
+        skipped: result.skipped || 0,
+        errors: result.errors || 0,
+        total: result.total || 0
+      };
+    }).catch((error) => {
+      console.error('Error processing Genshin JSON data:', error);
+      genshinUploadProgress[uploadId] = {
+        progress: 100,
+        message: 'Ошибка при обработке данных',
+        completed: true,
+        imported: 0,
+        skipped: 0,
+        errors: 1,
+        total: 0
+      };
+    });
 
-    res.json(result)
+    res.json({
+      message: 'Processing started',
+      uploadId
+    });
+
+    return;
 
   } catch (error: any) {
     console.error('Error importing Genshin JSON data:', error)
@@ -237,7 +355,7 @@ function isPaimonMoeFormat(data: any): boolean {
 }
 
 // Функция для обработки данных в формате paimon-moe
-async function processPaimonMoeData(prisma: PrismaClient, userId: number, userUid: string, jsonData: any) {
+async function processPaimonMoeData(prisma: PrismaClient, userId: number, userUid: string, jsonData: any, uploadId: string) {
   let importedCount = 0
   let skippedCount = 0
   let errorCount = 0
@@ -326,13 +444,38 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, userUi
   const totalPulls = allPulls.length;
   console.log(`📊 Starting Genshin import: ${totalPulls} pulls to process`);
 
+  // Начальный прогресс
+  genshinUploadProgress[uploadId] = {
+    ...genshinUploadProgress[uploadId],
+    progress: 0,
+    message: 'Начинаем обработку круток...'
+  };
+
   for (let i = 0; i < allPulls.length; i++) {
     const pull = allPulls[i];
 
+    // Обновляем прогресс для каждой крутки (но не чаще чем раз в 50мс)
+    const progress = Math.round(((i + 1) / totalPulls) * 100);
+    genshinUploadProgress[uploadId] = {
+      ...genshinUploadProgress[uploadId],
+      progress,
+      message: `Обработка крутки ${i + 1}/${totalPulls}...`,
+      imported: importedCount,
+      skipped: skippedCount,
+      errors: errorCount,
+      total: totalPulls,
+      currentItem: pull.name
+    };
+
     // Log progress every 10% or every 100 pulls
     if (i % Math.max(1, Math.floor(totalPulls / 10)) === 0 || i % 100 === 0) {
-      const progress = ((i / totalPulls) * 100).toFixed(1);
-      console.log(`🔄 Genshin Import Progress: ${i}/${totalPulls} pulls (${progress}%) - Imported: ${importedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+      const progressPercent = ((i / totalPulls) * 100).toFixed(1);
+      console.log(`🔄 Genshin Import Progress: ${i}/${totalPulls} pulls (${progressPercent}%) - Imported: ${importedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+    }
+
+    // Небольшая задержка для стабильного обновления прогресса
+    if (i % 10 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
 
     try {
@@ -451,6 +594,17 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, userUi
 
   // Final progress log
   console.log(`✅ Genshin Import Complete: ${totalPulls} pulls processed - Imported: ${importedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+
+  // Финальный прогресс
+  genshinUploadProgress[uploadId] = {
+    ...genshinUploadProgress[uploadId],
+    progress: 100,
+    message: 'Обработка завершена!',
+    imported: importedCount,
+    skipped: skippedCount,
+    errors: errorCount,
+    total: totalPulls
+  };
 
   // Обновляем статистику пользователя
   await updateGenshinUserStats(prisma, userId)

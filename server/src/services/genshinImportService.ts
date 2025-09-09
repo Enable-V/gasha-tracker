@@ -147,7 +147,7 @@ export class GenshinImportService {
   }
 
   // Импорт всех типов баннеров
-  async importGenshinData(url: string, userId: string): Promise<{
+  async importGenshinData(url: string, userId: string, onProgress?: (progress: number, message: string, imported?: number, skipped?: number, errors?: number, total?: number, currentItem?: string) => void): Promise<{
     success: boolean
     message: string
     stats: any
@@ -175,9 +175,17 @@ export class GenshinImportService {
       let totalSkipped = 0
       const bannerStats: Record<string, number> = {}
 
+      // Общее количество баннеров для расчета прогресса
+      const totalBanners = Object.keys(GENSHIN_BANNER_TYPES).length
+      let currentBannerIndex = 0
+
       // Импортируем данные для каждого типа баннера
       for (const [gachaType, bannerInfo] of Object.entries(GENSHIN_BANNER_TYPES)) {
         console.log(`🎯 Processing ${bannerInfo.name} (${gachaType})...`)
+        
+        // Обновляем прогресс при начале обработки баннера
+        const bannerProgress = Math.round((currentBannerIndex / totalBanners) * 100)
+        onProgress?.(bannerProgress, `Обработка баннера: ${bannerInfo.name}...`, totalImported, totalSkipped, 0, 0, bannerInfo.name)
         
         try {
           const banner = await this.getOrCreateBanner(gachaType)
@@ -188,6 +196,17 @@ export class GenshinImportService {
 
           while (hasMore) {
             console.log(`📄 Fetching page ${page} for ${bannerInfo.name}...`)
+            
+            // Обновляем прогресс для каждой страницы
+            onProgress?.(
+              Math.round(((currentBannerIndex + 0.5) / totalBanners) * 100), 
+              `${bannerInfo.name}: страница ${page}...`, 
+              totalImported, 
+              totalSkipped, 
+              0, 
+              0, 
+              `Загружается страница ${page}`
+            )
             
             const items = await this.fetchGachaData(url, params, gachaType, page, 20, endId)
             
@@ -202,7 +221,13 @@ export class GenshinImportService {
               hasMore = false
             }
 
-            for (const item of items) {
+            for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+              const item = items[itemIndex];
+              
+              // Обновляем прогресс для каждого элемента
+              const itemProgress = Math.round(((currentBannerIndex + (itemIndex + 1) / items.length) / totalBanners) * 100);
+              onProgress?.(itemProgress, `${bannerInfo.name}: обработка ${item.name}...`, totalImported, totalSkipped, 0, 0, item.name);
+
               try {
                 // Проверяем дубликаты: точное совпадение нормализованного имени И времени
                 // Только из ПРЕДЫДУЩИХ импортов, не из текущего (для обработки 10-pull батчей)
@@ -246,9 +271,18 @@ export class GenshinImportService {
                 // Log successful import
                 await logImport({ source: 'URL_IMPORT', action: 'IMPORTED', uid: userId, gachaId: `genshin_${item.id}`, itemName: item.name, bannerId: bannerId })
 
+                // Обновляем прогресс после успешного импорта
+                onProgress?.(itemProgress, `${bannerInfo.name}: импортирован ${item.name}`, totalImported, totalSkipped, 0, 0, `✅ ${item.name}`)
+
+                // Небольшая задержка для стабильного обновления прогресса
+                if ((itemIndex + 1) % 5 === 0) {
+                  await new Promise(resolve => setTimeout(resolve, 10));
+                }
+
               } catch (error: any) {
                 console.error(`Error importing item ${item.id}:`, error.message)
                 await logImport({ source: 'URL_IMPORT', action: 'ERROR', uid: userId, itemId: item.id, error: error.message })
+                onProgress?.(itemProgress, `${bannerInfo.name}: ошибка обработки ${item.name}`, totalImported, totalSkipped, 1, 0, `❌ ${item.name}`)
                 continue
               }
             }
@@ -270,11 +304,36 @@ export class GenshinImportService {
           bannerStats[bannerInfo.name] = bannerImported
           console.log(`✅ ${bannerInfo.name}: imported ${bannerImported} items`)
 
+          // Обновляем прогресс после завершения баннера
+          onProgress?.(
+            Math.round(((currentBannerIndex + 1) / totalBanners) * 100), 
+            `${bannerInfo.name} завершен: ${bannerImported} элементов`, 
+            totalImported, 
+            totalSkipped, 
+            0, 
+            0, 
+            `✅ Баннер ${bannerInfo.name} обработан`
+          )
+
         } catch (error: any) {
           console.error(`Error processing ${bannerInfo.name}:`, error.message)
           bannerStats[bannerInfo.name] = 0
+          onProgress?.(
+            Math.round(((currentBannerIndex + 1) / totalBanners) * 100), 
+            `Ошибка в баннере: ${bannerInfo.name}`, 
+            totalImported, 
+            totalSkipped, 
+            1, 
+            0, 
+            `❌ ${bannerInfo.name}`
+          )
         }
+
+        currentBannerIndex++
       }
+
+      // Финальный прогресс
+      onProgress?.(100, 'Импорт завершен!', totalImported, totalSkipped, 0, totalImported + totalSkipped)
 
       console.log(`📊 Import completed: ${totalImported} imported, ${totalSkipped} skipped`)
 
