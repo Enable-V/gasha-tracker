@@ -4,7 +4,7 @@ import { genshinImportService } from '../services/genshinImportService'
 import { authenticateToken, requireOwnership } from '../middleware/auth'
 import { PrismaClient } from '@prisma/client'
 import { logImport } from '../utils/importLogger'
-import { normalizeItemName, isDuplicatePullInDB } from '../utils/normalizeUtils'
+import { normalizeItemName, isDuplicatePullInDB, getItemRarity } from '../utils/normalizeUtils'
 
 const router = Router()
 const prisma = new PrismaClient()
@@ -560,6 +560,9 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, userUi
         pityCount++
       }
 
+      // Получаем правильный rarity из базы данных
+      const correctRarity = await getItemRarity(prisma, pull.name, 'GENSHIN', pull.rank_type);
+
       // Создаем запись крутки (сохраняем нормализованное имя для консистентности)
       await prisma.gachaPull.create({
         data: {
@@ -568,7 +571,7 @@ async function processPaimonMoeData(prisma: PrismaClient, userId: number, userUi
           gachaId: `genshin_${pull.id}`, // Унифицированный ID
           itemName: normalizeItemName(pull.name), // Нормализуем имя при сохранении
           itemType: pull.item_type,
-          rankType: pull.rank_type,
+          rankType: correctRarity,
           time: new Date(pull.time),
           pityCount,
           game: 'GENSHIN',

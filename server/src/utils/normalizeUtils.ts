@@ -64,3 +64,59 @@ export async function isDuplicatePullInDB(
   
   return false;
 }
+
+/**
+ * Get the correct rarity for an item from the database mapping
+ * Falls back to provided rankType if no mapping found
+ */
+export async function getItemRarity(
+  prisma: PrismaClient,
+  itemName: string,
+  game: 'GENSHIN' | 'HSR',
+  fallbackRankType?: number | string
+): Promise<number> {
+  const normalizedName = normalizeItemName(itemName);
+
+  // Try to find the item in our mapping database
+  const mapping = await prisma.itemNameMapping.findFirst({
+    where: {
+      englishName: normalizedName,
+      game: game
+    }
+  }) as any;
+
+  if (mapping && mapping.rarity) {
+    console.log(`✅ Found rarity mapping for "${itemName}" (${game}): ${mapping.rarity}★`);
+    return mapping.rarity;
+  }
+
+  // If no mapping found, try alternative name matching
+  const alternativeMapping = await prisma.itemNameMapping.findFirst({
+    where: {
+      OR: [
+        {
+          russianName: {
+            contains: normalizedName
+          },
+          game: game
+        },
+        {
+          englishName: {
+            contains: normalizedName.split(' ')[0] // Try first word
+          },
+          game: game
+        }
+      ]
+    }
+  }) as any;
+
+  if (alternativeMapping && alternativeMapping.rarity) {
+    console.log(`✅ Found alternative rarity mapping for "${itemName}" (${game}): ${alternativeMapping.rarity}★`);
+    return alternativeMapping.rarity;
+  }
+
+  // Fallback to provided rankType or default to 4★
+  const fallbackRarity = fallbackRankType ? parseInt(String(fallbackRankType)) : 4;
+  console.log(`⚠️ No rarity mapping found for "${itemName}" (${game}), using fallback: ${fallbackRarity}★`);
+  return fallbackRarity;
+}

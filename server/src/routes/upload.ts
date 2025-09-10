@@ -3,6 +3,7 @@ import multer from 'multer';
 import type { Response } from 'express';
 import { authenticateToken, requireOwnership, AuthRequest } from '../middleware/auth'
 import { PrismaClient } from '@prisma/client'
+import { getItemRarity } from '../utils/normalizeUtils'
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -542,6 +543,9 @@ async function processGachaData(prisma: any, userId: number, gachaData: any[], u
         pityCount++;
       }
       
+      // Получаем правильный rarity из базы данных
+      const correctRarity = await getItemRarity(prisma, pull.name, 'HSR', Number(pull.rank_type));
+      
       // Создаем запись крутки
       await prisma.gachaPull.create({
         data: {
@@ -550,7 +554,7 @@ async function processGachaData(prisma: any, userId: number, gachaData: any[], u
           gachaId: pull.id,
           itemName: pull.name,
           itemType: pull.item_type || 'Unknown',
-          rankType: Number(pull.rank_type),
+          rankType: correctRarity,
           time: new Date(pull.time),
           pityCount,
           isFeatured: false // Можно улучшить логику определения featured

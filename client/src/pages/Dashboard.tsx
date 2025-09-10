@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
 type GameType = 'HSR' | 'GENSHIN'
@@ -55,6 +56,7 @@ const translateItemType = (itemType: string, game: GameType): string => {
 
 const Dashboard = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [selectedGame, setSelectedGame] = useState<GameType>('HSR')
   const [gachaData, setGachaData] = useState<any>(null)
   const [stats, setStats] = useState<any>(null)
@@ -287,7 +289,15 @@ const Dashboard = () => {
     const bannerCounts: any = {}
     gachaData.pulls.forEach((pull: any) => {
       const bannerName = translateBannerName(pull.banner?.bannerName || 'Unknown', selectedGame)
-      bannerCounts[bannerName] = (bannerCounts[bannerName] || 0) + 1
+      const bannerId = pull.bannerId || pull.banner?.bannerId || 'unknown'
+      
+      if (!bannerCounts[bannerName]) {
+        bannerCounts[bannerName] = {
+          count: 0,
+          bannerId: bannerId
+        }
+      }
+      bannerCounts[bannerName].count += 1
     })
     
     return bannerCounts
@@ -309,8 +319,17 @@ const Dashboard = () => {
   // }
 
   // Компонент для отображения баннера с изображением
-  const BannerCard = ({ banner, count, percentage }: { banner: string, count: number, percentage: string }) => {
+  const BannerCard = ({ banner, count, percentage, bannerId }: { 
+    banner: string, 
+    count: number, 
+    percentage: string, 
+    bannerId: string 
+  }) => {
     const [bannerImageUrl, setBannerImageUrl] = useState<string>('/images/placeholder-banner.png')
+
+    const handleBannerClick = () => {
+      navigate(`/banner/${selectedGame.toLowerCase()}/${bannerId}`)
+    }
 
     useEffect(() => {
       const loadBannerImage = async () => {
@@ -325,7 +344,10 @@ const Dashboard = () => {
     }, [banner])
 
     return (
-      <div className="bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all hover:scale-105">
+      <div 
+        className="bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all hover:scale-105 cursor-pointer"
+        onClick={handleBannerClick}
+      >
         {/* Изображение баннера */}
         <div className="h-32 bg-gradient-to-r from-hsr-gold/20 to-purple-600/20 relative overflow-hidden">
           <img 
@@ -341,6 +363,14 @@ const Dashboard = () => {
             <div className="text-lg font-bold text-hsr-gold">{count}</div>
             <div className="text-gray-200 text-sm truncate">{banner}</div>
           </div>
+          {/* Иконка для клика */}
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-black/50 rounded-full p-2">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
         </div>
         
         {/* Статистика */}
@@ -348,6 +378,11 @@ const Dashboard = () => {
           <div className="flex justify-between items-center">
             <span className="text-gray-400 text-xs">Процент от общего</span>
             <span className="text-hsr-gold text-sm font-bold">{percentage}</span>
+          </div>
+          <div className="text-center mt-2">
+            <span className="text-xs text-purple-300 hover:text-purple-100 transition-colors">
+              Нажмите для просмотра →
+            </span>
           </div>
         </div>
       </div>
@@ -498,12 +533,13 @@ const Dashboard = () => {
               <div className="card">
                 <h2 className="text-xl font-bold text-white mb-4">🎯 Распределение по баннерам</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(bannerStats).map(([banner, count]: [string, any]) => (
+                  {Object.entries(bannerStats).map(([banner, data]: [string, any]) => (
                     <BannerCard 
                       key={banner}
                       banner={banner}
-                      count={count}
-                      percentage={rarityStats.total > 0 ? `${((count / rarityStats.total) * 100).toFixed(1)}%` : '0%'}
+                      count={data.count}
+                      percentage={rarityStats.total > 0 ? `${((data.count / rarityStats.total) * 100).toFixed(1)}%` : '0%'}
+                      bannerId={data.bannerId}
                     />
                   ))}
                 </div>

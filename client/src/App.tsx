@@ -9,6 +9,7 @@ import UserProfile from './pages/UserProfile'
 import TestPage from './pages/TestPage'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import BannerDetails from './pages/BannerDetails'
 // import BannerManagement from './pages/BannerManagement'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
@@ -38,6 +39,11 @@ function App() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <UserProfile />
+            </ProtectedRoute>
+          } />
+          <Route path="/banner/:game/:bannerId" element={
+            <ProtectedRoute>
+              <BannerDetails />
             </ProtectedRoute>
           } />
           {/* <Route path="/banners" element={

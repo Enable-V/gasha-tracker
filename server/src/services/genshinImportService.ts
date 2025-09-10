@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import axios from 'axios'
 import { logger } from '../middleware/logger'
 import { logImport } from '../utils/importLogger'
-import { normalizeItemName, isDuplicatePullInDB } from '../utils/normalizeUtils'
+import { normalizeItemName, isDuplicatePullInDB, getItemRarity } from '../utils/normalizeUtils'
 
 const prisma = new PrismaClient()
 
@@ -251,6 +251,9 @@ export class GenshinImportService {
                   continue;
                 }
 
+                // Получаем правильный rarity из базы данных
+                const correctRarity = await getItemRarity(prisma, item.name, 'GENSHIN', parseInt(item.rank_type));
+
                 // Создаем запись о крутке (сохраняем нормализованное имя для консистентности)
                 await prisma.gachaPull.create({
                   data: {
@@ -259,7 +262,7 @@ export class GenshinImportService {
                     gachaId: `genshin_${item.id}`,
                     itemName: normalizeItemName(item.name), // Нормализуем имя при сохранении
                     itemType: item.item_type,
-                    rankType: parseInt(item.rank_type),
+                    rankType: correctRarity,
                     time: new Date(item.time),
                     pityCount: 0, // Будет рассчитан позже
                     isFeatured: false, // Будет определен позже

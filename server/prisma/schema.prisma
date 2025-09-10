@@ -92,6 +92,7 @@ model ItemNameMapping {
   russianName String   @map("russian_name") @db.VarChar(100)
   game        GameType
   itemType    String   @map("item_type") @db.VarChar(50)
+  rarity      Int      @map("rarity")
   createdAt   DateTime @default(now()) @map("created_at")
   
   @@unique([englishName, game], name: "unique_english_name_game")

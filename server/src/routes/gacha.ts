@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { PrismaClient } from '@prisma/client'
 import { authenticateOptional, requireOwnership, AuthRequest } from '../middleware/auth'
 import { logger } from '../middleware/logger'
+import { getItemRarity } from '../utils/normalizeUtils'
 
 const router = Router();
 const prisma = new PrismaClient()
@@ -206,6 +207,12 @@ router.post('/import', authenticateOptional, async (req: AuthRequest, res: Respo
           pityCount++;
         }
         
+        // Определяем игру на основе формата данных
+        const game = pull.gacha_type && typeof pull.gacha_type === 'string' && pull.gacha_type.includes('genshin') ? 'GENSHIN' : 'HSR';
+        
+        // Получаем правильный rarity из базы данных
+        const correctRarity = await getItemRarity(prisma, pull.name, game, Number(pull.rank_type));
+        
         await prisma.gachaPull.create({
           data: {
             userId: user.id,
@@ -213,9 +220,10 @@ router.post('/import', authenticateOptional, async (req: AuthRequest, res: Respo
             gachaId: pull.id,
             itemName: pull.name,
             itemType: pull.item_type,
-            rankType: Number(pull.rank_type),
+            rankType: correctRarity,
             time: new Date(pull.time),
-            pityCount
+            pityCount,
+            game: game
           }
         });
         
