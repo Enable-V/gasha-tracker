@@ -157,7 +157,8 @@ router.post('/login', async (req: Request, res: Response) => {
         id: user.id,
         uid: user.uid,
         username: user.username,
-        email: user.email
+        email: user.email,
+        role: user.role
       },
       token
     })
@@ -180,6 +181,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response) => 
         uid: true,
         username: true,
         email: true,
+        role: true,
         createdAt: true,
         _count: {
           select: {

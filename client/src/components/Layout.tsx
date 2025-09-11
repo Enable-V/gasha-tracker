@@ -16,6 +16,10 @@ const Layout = ({ children }: LayoutProps) => {
     { name: 'Загрузка данных', href: '/upload', icon: '⬆️', protected: true },
     { name: 'Статистика', href: '/statistics', icon: '⭐', protected: true },
   ]
+  
+  const adminNavigation = [
+    { name: 'Админка', href: '/admin', icon: '🛡️', admin: true }
+  ]
 
   const isActive = (path: string) => location.pathname === path
 
@@ -50,6 +54,24 @@ const Layout = ({ children }: LayoutProps) => {
                       <span>{item.name}</span>
                     </Link>
                   ))}
+                  
+                  {/* Admin Navigation */}
+                  {isAuthenticated && user?.role === 'ADMIN' && (
+                    adminNavigation.map((item) => (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={`${
+                          isActive(item.href)
+                            ? 'bg-purple-500/20 text-purple-300'
+                            : 'text-purple-300 hover:bg-purple-500/10 hover:text-purple-200'
+                        } px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-1 transition-all duration-200`}
+                      >
+                        <span className="text-lg">{item.icon}</span>
+                        <span>{item.name}</span>
+                      </Link>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

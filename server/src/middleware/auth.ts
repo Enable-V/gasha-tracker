@@ -8,8 +8,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-i
 export interface AuthRequest extends Request {
   user?: {
     id: number
+    uid: string
     username: string
     email?: string
+    role?: string
   }
 }
 
@@ -46,10 +48,17 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       })
     }
 
+    // Получаем полные данные пользователя включая role
+    const fullUser = await prisma.user.findUnique({
+      where: { id: decoded.id }
+    }) as any
+
     req.user = {
       id: user.id,
+      uid: user.uid,
       username: user.username,
-      email: user.email || undefined
+      email: user.email || undefined,
+      role: fullUser?.role || 'USER'
     }
     next()
   } catch (error) {
@@ -82,10 +91,17 @@ export const authenticateOptional = async (req: AuthRequest, res: Response, next
     })
 
     if (user && user.isActive) {
+      // Получаем полные данные пользователя включая role
+      const fullUser = await prisma.user.findUnique({
+        where: { id: decoded.id }
+      }) as any
+
       req.user = {
         id: user.id,
+        uid: user.uid,
         username: user.username,
-        email: user.email || undefined
+        email: user.email || undefined,
+        role: fullUser?.role || 'USER'
       }
     }
   } catch (error) {
@@ -110,6 +126,25 @@ export const requireOwnership = (req: AuthRequest, res: Response, next: NextFunc
     return res.status(403).json({
       error: 'Access denied',
       message: 'Доступ запрещен. Вы можете просматривать только свои данные.'
+    })
+  }
+
+  next()
+}
+
+// Middleware для проверки админских прав
+export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({
+      error: 'Authentication required',
+      message: 'Требуется аутентификация'
+    })
+  }
+
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({
+      error: 'Admin access required',
+      message: 'Требуются права администратора'
     })
   }
 

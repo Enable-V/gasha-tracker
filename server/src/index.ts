@@ -14,6 +14,7 @@ import uploadRoutes from './routes/upload.js';
 import testRoutes from './routes/test.js';
 import authRoutes from './routes/auth.js';
 import itemRoutes from './routes/items.js';
+import adminRoutes from './routes/admin.js';
 import { bannerRouter } from './routes/banners.js';
 import { bannerImageService } from './services/bannerImageService.js';
 
@@ -76,6 +77,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/test', testRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/banners', bannerRouter);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

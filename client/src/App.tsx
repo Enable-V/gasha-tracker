@@ -6,10 +6,10 @@ import Dashboard from './pages/Dashboard'
 import Upload from './pages/Upload'
 import Statistics from './pages/Statistics'
 import UserProfile from './pages/UserProfile'
-import TestPage from './pages/TestPage'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import BannerDetails from './pages/BannerDetails'
+import AdminPanel from './pages/AdminPanel'
 // import BannerManagement from './pages/BannerManagement'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 
@@ -46,12 +46,16 @@ function App() {
               <BannerDetails />
             </ProtectedRoute>
           } />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminPanel />
+            </ProtectedRoute>
+          } />
           {/* <Route path="/banners" element={
             <ProtectedRoute>
               <BannerManagement />
             </ProtectedRoute>
           } /> */}
-          <Route path="/test" element={<TestPage />} />
         </Routes>
       </Layout>
     </AuthProvider>
