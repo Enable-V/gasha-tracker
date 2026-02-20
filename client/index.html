@@ -2,13 +2,84 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/hsr-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Трекер круток Honkai Star Rail - отслеживайте свою удачу и статистику" />
-    <title>HSR Gacha Tracker</title>
+
+    <!-- SEO: основные мета-теги -->
+    <title>Gacha Tracker — трекер круток Honkai Star Rail и Genshin Impact</title>
+    <meta name="description" content="Универсальный трекер круток для Honkai Star Rail и Genshin Impact. Один аккаунт для двух игр — статистика хранится постоянно и не сбрасывается через полгода. Отслеживайте питу, анализируйте удачу, смотрите статистику по баннерам. Бесплатный онлайн-сервис." />
+    <meta name="keywords" content="gacha tracker, honkai star rail, genshin impact, трекер круток, pity tracker, статистика круток, баннеры, гача трекер, хонкай стар рейл, геншин импакт, питу трекер" />
+    <meta name="author" content="Enable-V" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://liht.online/" />
+
+    <!-- Яндекс.Вебмастер верификация -->
+    <meta name="yandex-verification" content="19771465b99cb4ef" />
+
+    <!-- Яндекс: дополнительные мета-теги -->
+    <meta name="theme-color" content="#0f0f23" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Open Graph (для соцсетей и Яндекс) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Gacha Tracker" />
+    <meta property="og:title" content="Gacha Tracker — трекер круток Honkai Star Rail и Genshin Impact" />
+    <meta property="og:description" content="Один аккаунт для двух игр — Honkai Star Rail и Genshin Impact. Статистика хранится постоянно и никогда не сбрасывается. Отслеживайте питу и анализируйте удачу по всем баннерам." />
+    <meta property="og:url" content="https://liht.online/" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:image" content="https://liht.online/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Gacha Tracker — трекер круток" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Gacha Tracker — трекер круток Honkai Star Rail и Genshin Impact" />
+    <meta name="twitter:description" content="Один аккаунт для HSR и Genshin — статистика хранится постоянно, не сбрасывается. Отслеживайте питу и анализируйте удачу." />
+    <meta name="twitter:image" content="https://liht.online/og-image.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/hsr-icon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- Шрифты -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Preload иконок игр -->
+    <link rel="preload" href="/images/static/games/hsr_icon.svg" as="image" type="image/svg+xml" />
+    <link rel="preload" href="/images/static/games/genshin_icon.svg" as="image" type="image/svg+xml" />
+
+    <!-- JSON-LD структурированные данные -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Gacha Tracker",
+      "url": "https://liht.online",
+      "description": "Универсальный трекер круток для Honkai Star Rail и Genshin Impact. Один аккаунт для двух игр — статистика хранится постоянно, не сбрасывается через полгода.",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Web",
+      "author": {
+        "@type": "Person",
+        "name": "Enable-V",
+        "url": "https://github.com/Enable-V"
+      },
+      "sourceOrganization": {
+        "@type": "Organization",
+        "name": "Enable-V",
+        "url": "https://github.com/Enable-V/gasha-tracker"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "RUB"
+      },
+      "inLanguage": "ru",
+      "isAccessibleForFree": true
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -4,40 +4,220 @@
 
 @layer base {
   body {
-    @apply bg-gradient-to-br from-hsr-dark to-hsr-darker text-white;
+    @apply bg-void-900 text-white font-sans;
+    background-image: 
+      radial-gradient(ellipse at 20% 50%, rgba(168,85,247,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(59,130,246,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(251,191,36,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  /* Кастомный скроллбар */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.02);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(168,85,247,0.3);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(168,85,247,0.5);
+  }
+
+  ::selection {
+    background: rgba(251,191,36,0.3);
+    color: #fff;
   }
 }
 
 @layer components {
+  /* ===== Glass Card ===== */
   .card {
-    @apply bg-white/10 backdrop-blur-md rounded-lg border border-white/20 p-6 shadow-lg;
+    @apply relative rounded-xl p-6;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.10);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+  .card:hover {
+    border-color: rgba(255,255,255,0.14);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+
+  /* ===== Buttons ===== */
   .btn-primary {
-    @apply bg-gradient-to-r from-hsr-gold to-yellow-400 text-black px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:shadow-hsr-gold/50 transition-all duration-300;
+    @apply relative px-6 py-3 rounded-lg font-semibold text-void-900 overflow-hidden;
+    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 50%, #0891b2 100%);
+    background-size: 200% 200%;
+    box-shadow: 0 4px 15px rgba(34,211,238,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
   }
-  
+  .btn-primary:hover {
+    background-position: 100% 0;
+    box-shadow: 0 6px 25px rgba(34,211,238,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
   .btn-secondary {
-    @apply bg-white/10 backdrop-blur-md border border-white/30 px-6 py-3 rounded-lg font-semibold hover:bg-white/20 transition-all duration-300;
+    @apply px-6 py-3 rounded-lg font-semibold text-white/90;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
   }
-  
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(168,85,247,0.3);
+    box-shadow: 0 0 20px rgba(168,85,247,0.1);
+    transform: translateY(-1px);
+  }
+
+  /* ===== Rarity badges ===== */
   .rarity-5 {
-    @apply bg-gradient-to-r from-hsr-gold to-yellow-400 text-black;
+    background: linear-gradient(135deg, #22d3ee, #06b6d4);
+    @apply text-black font-semibold;
+    box-shadow: 0 0 12px rgba(34,211,238,0.4);
   }
-  
   .rarity-4 {
-    @apply bg-gradient-to-r from-hsr-purple to-purple-400 text-white;
+    background: linear-gradient(135deg, #a855f7, #8b5cf6);
+    @apply text-white font-semibold;
+    box-shadow: 0 0 12px rgba(168,85,247,0.4);
   }
-  
   .rarity-3 {
-    @apply bg-gradient-to-r from-hsr-blue to-blue-400 text-white;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    @apply text-white font-semibold;
+    box-shadow: 0 0 12px rgba(99,102,241,0.3);
   }
-  
+
+  /* ===== Stat Card ===== */
   .stat-card {
-    @apply card hover:scale-105 transition-transform duration-300;
+    @apply card cursor-default;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+  .stat-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(34,211,238,0.15);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 30px rgba(34,211,238,0.05);
+  }
+
+  /* ===== Spinner ===== */
   .loading-spinner {
-    @apply inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite];
+    @apply inline-block h-8 w-8 animate-spin rounded-full;
+    border: 3px solid rgba(168,85,247,0.2);
+    border-top-color: #a855f7;
+  }
+
+  /* ===== Mobile touch targets ===== */
+  @media (max-width: 768px) {
+    button, a, input, textarea, select {
+      @apply min-h-[44px];
+    }
+    .card {
+      @apply mx-4;
+    }
+  }
+
+  /* ===== Overlay utilities ===== */
+  .overlay-hidden { @apply opacity-0 pointer-events-none; }
+  .overlay-visible { @apply opacity-100 pointer-events-auto; }
+  .slide-in-right { @apply transform translate-x-0; }
+  .slide-out-right { @apply transform translate-x-full; }
+
+  html { scroll-behavior: smooth; }
+
+  /* ===== Text utilities ===== */
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .recent-item-title { @apply text-white font-medium truncate; }
+  .recent-item-meta { @apply text-gray-400 text-sm truncate; }
+
+  /* ===== Gradient text ===== */
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #a5f3fc, #22d3ee, #0891b2);
+  }
+  .text-gradient-purple {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #c084fc, #a855f7, #7c3aed);
+  }
+  .text-gradient-cosmic {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #22d3ee, #a855f7, #3b82f6);
+    background-size: 200% 200%;
+  }
+
+  .text-animate-cosmic {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, #22d3ee, #c084fc, #ec4899, #22d3ee);
+    background-size: 300% 100%;
+    animation: cosmic-shimmer 4s ease-in-out infinite;
+  }
+
+  @keyframes cosmic-shimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+
+  /* ===== Glass input ===== */
+  .input-glass {
+    @apply w-full px-4 py-3 rounded-lg text-white placeholder-gray-500;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+  }
+  .input-glass:focus {
+    @apply outline-none;
+    border-color: rgba(34,211,238,0.4);
+    box-shadow: 0 0 0 3px rgba(34,211,238,0.1), 0 0 20px rgba(34,211,238,0.05);
+    background: rgba(255,255,255,0.06);
+  }
+
+  /* ===== Dark select / option ===== */
+  select.input-glass,
+  select.select-glass {
+    @apply appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.25rem;
+    padding-right: 2.5rem;
+  }
+  select option,
+  select.input-glass option,
+  select.select-glass option {
+    background: #0f0f1e;
+    color: #e5e7eb;
+    padding: 8px 12px;
+  }
+  select option:hover,
+  select option:checked {
+    background: rgba(34,211,238,0.15);
+    color: #fff;
+  }
+
+  /* ===== Nav glass bar ===== */
+  .nav-glass {
+    background: rgba(5,5,16,0.85);
+    backdrop-filter: blur(20px) saturate(1.5);
+  }
+
+  /* ===== Glow ring ===== */
+  .glow-ring-gold {
+    box-shadow: 0 0 0 2px rgba(34,211,238,0.3), 0 0 15px rgba(34,211,238,0.15);
+  }
+  .glow-ring-purple {
+    box-shadow: 0 0 0 2px rgba(168,85,247,0.3), 0 0 15px rgba(168,85,247,0.15);
   }
 }

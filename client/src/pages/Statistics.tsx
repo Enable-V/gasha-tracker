@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import CharacterImage from '../components/CharacterImage'
 
 type GameType = 'HSR' | 'GENSHIN'
+
+// Интерфейс для маппинга названий предметов
+interface ItemNameMapping {
+  englishName: string
+  russianName: string
+  game: GameType
+  itemType: string
+}
 
 interface UserStats {
   user: {
@@ -18,6 +27,7 @@ interface UserStats {
   bannerStats: Array<{
     bannerId: string
     bannerName: string
+    game: string
     count: number
   }>
 }
@@ -26,7 +36,10 @@ interface BannerDetail {
   banner: {
     id: number
     name: string
+    nameRu?: string
     type: string
+    imagePath?: string
+    game: string
   }
   stats: {
     totalPulls: number
@@ -34,6 +47,13 @@ interface BannerDetail {
     fourStarCount: number
     lastFiveStar: string | null
     lastFourStar: string | null
+    averagePity: string
+    fiveStarItemList: Array<{
+      name: string
+      pity: number
+      time: string
+      isFeatured: boolean
+    }>
   }
   recentPulls: Array<{
     id: string
@@ -48,12 +68,67 @@ interface BannerDetail {
 
 const Statistics = () => {
   const { user } = useAuth()
-  const [selectedGame, setSelectedGame] = useState<GameType>('HSR')
+  const [_selectedGame, _setSelectedGame] = useState<GameType>('HSR')
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [selectedBanner, setSelectedBanner] = useState<string | null>(null)
   const [bannerDetail, setBannerDetail] = useState<BannerDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [gameFilter, setGameFilter] = useState<string>('all')
+  const [itemMappings, setItemMappings] = useState<{ [key: string]: string }>({})
+
+  // Функция для получения русского названия предмета
+  const translateItemName = (englishName: string, game: GameType): string => {
+    const key = `${englishName.toLowerCase()}_${game}`
+    return itemMappings[key] || englishName
+  }
+
+  // Функция перевода типов предметов
+  const translateItemType = (itemType: string, game: GameType): string => {
+    const translations: { [key: string]: { [key: string]: string } } = {
+      'Character': {
+        'HSR': 'Персонаж',
+        'GENSHIN': 'Персонаж'
+      },
+      'Light Cone': {
+        'HSR': 'Световой конус',
+        'GENSHIN': 'Световой конус'
+      },
+      'Weapon': {
+        'HSR': 'Оружие',
+        'GENSHIN': 'Оружие'
+      }
+    }
+    
+    return translations[itemType]?.[game] || itemType
+  }
+
+  // Загрузка переводов названий предметов
+  const loadItemMappings = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/items/mappings', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to load item mappings')
+      }
+      
+      const data = await response.json()
+      
+      // Создаем карту для быстрого поиска: "englishname_game" -> "russianName"
+      const mappings: { [key: string]: string } = {}
+      data.forEach((mapping: ItemNameMapping) => {
+        const key = `${mapping.englishName.toLowerCase()}_${mapping.game}`
+        mappings[key] = mapping.russianName
+      })
+      
+      setItemMappings(mappings)
+    } catch (error) {
+      console.error('Ошибка загрузки переводов предметов:', error)
+    }
+  }
 
   const fetchUserStats = async () => {
     if (!user?.uid) return
@@ -105,6 +180,7 @@ const Statistics = () => {
   useEffect(() => {
     if (user) {
       fetchUserStats()
+      loadItemMappings()
     }
   }, [user])
 
@@ -141,7 +217,7 @@ const Statistics = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+        <div className="loading-spinner"></div>
       </div>
     )
   }
@@ -179,105 +255,82 @@ const Statistics = () => {
     ? ((threeStarPulls / userStats.stats.totalPulls) * 100).toFixed(2)
     : '0.00'
 
+  // Фильтрация баннеров по игре
+  const filteredBannerStats = userStats.bannerStats.filter(banner => {
+    if (gameFilter === 'all') return true
+    return banner.game === gameFilter
+  })
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Статистика</h1>
-        <div className="text-gray-400">
-          Пользователь: <span className="text-white font-semibold">{userStats.user.username}</span>
+        <h1 className="text-3xl font-bold text-gradient-gold">Статистика</h1>
+        <div className="rounded-lg px-4 py-2" style={{ background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.15)' }}>
+          <span className="text-white font-bold">{userStats.user.username}</span>
         </div>
       </div>
       
-      {/* Общая статистика */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4">Общая статистика</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Всего круток:</span>
-              <span className="text-white font-semibold">{userStats.stats.totalPulls}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">5-звездочных:</span>
-              <span className="text-yellow-400 font-semibold">{userStats.stats.fiveStarPulls}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">4-звездочных:</span>
-              <span className="text-purple-400 font-semibold">{userStats.stats.fourStarPulls}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">3-звездочных:</span>
-              <span className="text-blue-400 font-semibold">{threeStarPulls}</span>
-            </div>
-          </div>
+      {/* Общая статистика — верхние карточки */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="relative rounded-xl p-6 text-center hover:scale-[1.03] transition-all duration-300" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(34,211,238,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+          <div className="text-3xl font-bold text-accent-cyan mb-2">{userStats.stats.totalPulls}</div>
+          <div className="text-gray-300">Всего круток</div>
+          <div className="text-sm text-gray-500 mt-1">Все баннеры</div>
         </div>
-        
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4">Процент выпадения</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-400">5★ предметы:</span>
-              <span className="text-yellow-400 font-semibold">{userStats.stats.fiveStarRate}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">4★ предметы:</span>
-              <span className="text-purple-400 font-semibold">{userStats.stats.fourStarRate}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">3★ предметы:</span>
-              <span className="text-blue-400 font-semibold">{threeStarRate}%</span>
-            </div>
-          </div>
+        <div className="relative rounded-xl p-6 text-center hover:scale-[1.03] transition-all duration-300" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(251,191,36,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+          <div className="text-3xl font-bold text-yellow-400 mb-2">{userStats.stats.fiveStarPulls}</div>
+          <div className="text-gray-300">5<span className="text-yellow-400">★</span> предметов</div>
+          <div className="text-sm text-gray-500 mt-1">{userStats.stats.fiveStarRate}% шанс</div>
         </div>
+        <div className="relative rounded-xl p-6 text-center hover:scale-[1.03] transition-all duration-300" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(168,85,247,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+          <div className="text-3xl font-bold text-star-purple-light mb-2">{userStats.stats.fourStarPulls}</div>
+          <div className="text-gray-300">4<span className="text-star-purple-light">★</span> предметов</div>
+          <div className="text-sm text-gray-500 mt-1">{userStats.stats.fourStarRate}% шанс</div>
+        </div>
+        <div className="relative rounded-xl p-6 text-center hover:scale-[1.03] transition-all duration-300" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(59,130,246,0.12)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+          <div className="text-3xl font-bold text-star-blue mb-2">{threeStarPulls}</div>
+          <div className="text-gray-300">3<span className="text-star-blue">★</span> предметов</div>
+          <div className="text-sm text-gray-500 mt-1">{threeStarRate}% шанс</div>
+        </div>
+      </div>
 
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4">Распределение редкости</h2>
-          <div className="space-y-3">
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-yellow-400 rounded-full mr-3"></div>
-              <div className="flex-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">5★</span>
-                  <span className="text-yellow-400">{userStats.stats.fiveStarRate}%</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2 mt-1">
-                  <div 
-                    className="bg-yellow-400 h-2 rounded-full" 
-                    style={{ width: `${userStats.stats.fiveStarRate}%` }}
-                  ></div>
-                </div>
+      {/* Распределение редкости */}
+      <div className="card">
+        <h2 className="text-xl font-bold text-white mb-4">Распределение редкости</h2>
+        <div className="space-y-4">
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-yellow-400 rounded-full mr-3 flex-shrink-0"></div>
+            <div className="flex-1">
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-400">5★</span>
+                <span className="text-yellow-400 font-semibold">{userStats.stats.fiveStarRate}%</span>
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-2">
+                <div className="bg-yellow-400 h-2 rounded-full transition-all duration-500" style={{ width: `${userStats.stats.fiveStarRate}%` }}></div>
               </div>
             </div>
-            
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-purple-400 rounded-full mr-3"></div>
-              <div className="flex-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">4★</span>
-                  <span className="text-purple-400">{userStats.stats.fourStarRate}%</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2 mt-1">
-                  <div 
-                    className="bg-purple-400 h-2 rounded-full" 
-                    style={{ width: `${userStats.stats.fourStarRate}%` }}
-                  ></div>
-                </div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-star-purple-light rounded-full mr-3 flex-shrink-0"></div>
+            <div className="flex-1">
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-400">4★</span>
+                <span className="text-star-purple-light font-semibold">{userStats.stats.fourStarRate}%</span>
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-2">
+                <div className="bg-star-purple-light h-2 rounded-full transition-all duration-500" style={{ width: `${userStats.stats.fourStarRate}%` }}></div>
               </div>
             </div>
-            
-            <div className="flex items-center">
-              <div className="w-4 h-4 bg-blue-400 rounded-full mr-3"></div>
-              <div className="flex-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">3★</span>
-                  <span className="text-blue-400">{threeStarRate}%</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2 mt-1">
-                  <div 
-                    className="bg-blue-400 h-2 rounded-full" 
-                    style={{ width: `${threeStarRate}%` }}
-                  ></div>
-                </div>
+          </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-star-blue rounded-full mr-3 flex-shrink-0"></div>
+            <div className="flex-1">
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-400">3★</span>
+                <span className="text-star-blue font-semibold">{threeStarRate}%</span>
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-2">
+                <div className="bg-star-blue h-2 rounded-full transition-all duration-500" style={{ width: `${threeStarRate}%` }}></div>
               </div>
             </div>
           </div>
@@ -286,16 +339,53 @@ const Statistics = () => {
 
       {/* Статистика по баннерам */}
       <div className="card">
-        <h2 className="text-xl font-bold text-white mb-4">Статистика по баннерам</h2>
-        {userStats.bannerStats.length > 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-white">Статистика по баннерам</h2>
+          
+          {/* Фильтр по играм */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setGameFilter('all')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                gameFilter === 'all'
+                  ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30'
+                  : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              Все
+            </button>
+            <button
+              onClick={() => setGameFilter('HSR')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                gameFilter === 'HSR'
+                  ? 'bg-star-purple/20 text-star-purple-light border-star-purple/30'
+                  : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              HSR
+            </button>
+            <button
+              onClick={() => setGameFilter('GENSHIN')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 border ${
+                gameFilter === 'GENSHIN'
+                  ? 'bg-star-blue/20 text-star-blue-light border-star-blue/30'
+                  : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              Genshin
+            </button>
+          </div>
+        </div>
+        
+        {filteredBannerStats.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {userStats.bannerStats.map((banner) => (
+            {filteredBannerStats.map((banner) => (
               <div 
                 key={banner.bannerId}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                className={`p-4 rounded-xl border cursor-pointer transition-all duration-300 backdrop-blur-sm ${
                   selectedBanner === banner.bannerId 
-                    ? 'border-blue-500 bg-blue-500/10' 
-                    : 'border-gray-600 hover:border-gray-500'
+                    ? 'border-accent-cyan/40 bg-accent-cyan/10 shadow-[0_4px_20px_rgba(34,211,238,0.1)]' 
+                    : 'border-accent-cyan/10 hover:border-accent-cyan/20 bg-white/3 hover:bg-white/5 shadow-[0_4px_16px_rgba(0,0,0,0.15)]'
                 }`}
                 onClick={() => setSelectedBanner(
                   selectedBanner === banner.bannerId ? null : banner.bannerId
@@ -317,70 +407,157 @@ const Statistics = () => {
 
       {/* Детальная статистика выбранного баннера */}
       {selectedBanner && bannerDetail && (
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4">
-            Детали баннера: {bannerDetail.banner.name}
-          </h2>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="card relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent-cyan/3 via-transparent to-star-purple/3 pointer-events-none" />
+          <div className="relative z-10">
+          <div className="flex items-center mb-6 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(34,211,238,0.1)' }}>
+            {bannerDetail.banner.imagePath && (
+              <img 
+                src={`/api/images/banners/${bannerDetail.banner.imagePath}`}
+                alt={bannerDetail.banner.name}
+                className="w-16 h-16 rounded-lg mr-4 object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
             <div>
-              <h3 className="text-lg font-semibold text-white mb-3">Статистика</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Всего круток:</span>
-                  <span className="text-white font-semibold">{bannerDetail.stats.totalPulls}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">5★ предметов:</span>
-                  <span className="text-yellow-400 font-semibold">{bannerDetail.stats.fiveStarCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">4★ предметов:</span>
-                  <span className="text-purple-400 font-semibold">{bannerDetail.stats.fourStarCount}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-3">Последние выпадения</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Последний 5★:</span>
-                  <span className="text-yellow-400 text-sm">
-                    {formatDate(bannerDetail.stats.lastFiveStar)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Последний 4★:</span>
-                  <span className="text-purple-400 text-sm">
-                    {formatDate(bannerDetail.stats.lastFourStar)}
-                  </span>
-                </div>
+              <h2 className="text-xl font-bold text-gradient-gold">
+                {bannerDetail.banner.nameRu || bannerDetail.banner.name}
+              </h2>
+              <div className="text-gray-400 text-sm">
+                {bannerDetail.banner.type === 'character' && 'Баннер персонажа'}
+                {bannerDetail.banner.type === 'weapon' && 'Баннер оружия'}
+                {bannerDetail.banner.type === 'standard' && 'Стандартная молитва'}
+                {bannerDetail.banner.type === 'chronicled' && 'Chronicled Wish'}
               </div>
             </div>
           </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="rounded-xl p-4 text-center transition-all duration-300" style={{ background: 'rgba(34,211,238,0.04)', border: '1px solid rgba(34,211,238,0.1)' }}>
+              <div className="text-2xl font-bold text-accent-cyan mb-1">{bannerDetail.stats.totalPulls}</div>
+              <div className="text-gray-400 text-sm">Всего круток</div>
+            </div>
+            <div className="rounded-xl p-4 text-center transition-all duration-300" style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.1)' }}>
+              <div className="text-2xl font-bold text-yellow-400 mb-1">{bannerDetail.stats.fiveStarCount}</div>
+              <div className="text-gray-400 text-sm">5★ предметов</div>
+            </div>
+            <div className="rounded-xl p-4 text-center transition-all duration-300" style={{ background: 'rgba(168,85,247,0.04)', border: '1px solid rgba(168,85,247,0.1)' }}>
+              <div className="text-2xl font-bold text-star-purple-light mb-1">{bannerDetail.stats.fourStarCount}</div>
+              <div className="text-gray-400 text-sm">4★ предметов</div>
+            </div>
+            <div className="rounded-xl p-4 text-center transition-all duration-300" style={{ background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.1)' }}>
+              <div className="text-2xl font-bold text-star-blue mb-1">{bannerDetail.stats.averagePity}</div>
+              <div className="text-gray-400 text-sm">Средний pity</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="rounded-xl p-4 flex items-center justify-between transition-all duration-300" style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.1)' }}>
+              <span className="text-gray-400">Последний 5★</span>
+              <span className="text-yellow-400 font-medium text-sm">{formatDate(bannerDetail.stats.lastFiveStar)}</span>
+            </div>
+            <div className="rounded-xl p-4 flex items-center justify-between transition-all duration-300" style={{ background: 'rgba(168,85,247,0.04)', border: '1px solid rgba(168,85,247,0.1)' }}>
+              <span className="text-gray-400">Последний 4★</span>
+              <span className="text-star-purple-light font-medium text-sm">{formatDate(bannerDetail.stats.lastFourStar)}</span>
+            </div>
+          </div>
+
+          {/* Список всех 5★ предметов */}
+          {bannerDetail.stats.fiveStarItemList.length > 0 && (
+            <div className="mb-6 group">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                <span className="text-yellow-400 mr-2 group-hover:text-yellow-300 transition-colors duration-300">★</span>
+                Все 5★ предметы ({bannerDetail.stats.fiveStarItemList.length})
+              </h3>
+              <div 
+                className="max-h-96 overflow-y-auto rounded-xl p-4 bg-accent-cyan/5 border border-accent-cyan/20 transition-all duration-300"
+                style={{ scrollbarWidth: 'thin', scrollbarColor: 'transparent transparent' }}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {bannerDetail.stats.fiveStarItemList.map((item, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center justify-between p-3 rounded-xl bg-accent-cyan/5 border border-accent-cyan/20 hover:border-accent-cyan/40 transition-all duration-300 transform hover:scale-[1.02]"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center">
+                          <CharacterImage
+                            itemName={item.name}
+                            itemType={bannerDetail.banner.type === 'character' ? 'Character' : 'Weapon'}
+                            game={bannerDetail.banner.game === 'HSR' ? 'HSR' : 'Genshin'}
+                            className="w-full h-full"
+                          />
+                        </div>
+                        <div>
+                          <div className="text-white font-medium text-sm">
+                            {translateItemName(item.name, bannerDetail.banner.game === 'HSR' ? 'HSR' : 'GENSHIN')}
+                          </div>
+                          <div className="text-gray-400 text-xs">
+                            {new Date(item.time).toLocaleDateString('ru-RU', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-accent-cyan font-bold text-lg">{item.pity}</div>
+                        <div className="text-gray-400 text-xs">pity</div>
+                        {item.isFeatured && (
+                          <div className="text-accent-cyan text-xs font-semibold">★</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Последние круки */}
           {bannerDetail.recentPulls.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-3">Последние 20 круток</h3>
-              <div className="max-h-96 overflow-y-auto">
+            <div className="group">
+              <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                <svg className="w-5 h-5 text-star-purple-light mr-2 group-hover:text-star-purple transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                Последние 20 круток
+              </h3>
+              <div 
+                className="max-h-96 overflow-y-auto rounded-xl p-4 backdrop-blur-sm transition-all duration-300"
+                style={{ background: 'rgba(168,85,247,0.03)', border: '1px solid rgba(168,85,247,0.1)', boxShadow: '0 4px 16px rgba(0,0,0,0.15)', scrollbarWidth: 'thin', scrollbarColor: 'transparent transparent' }}
+              >
                 <div className="space-y-2">
                   {bannerDetail.recentPulls.map((pull) => (
                     <div 
                       key={pull.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-800/50"
+                      className="flex items-center justify-between p-3 rounded-xl backdrop-blur-sm transition-all duration-300 transform hover:scale-[1.01]"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(168,85,247,0.08)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
                     >
                       <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center">
+                          <CharacterImage
+                            key={`stats-item-${_selectedGame}-${pull.id}-${pull.itemName}-${pull.itemType}`}
+                            itemName={translateItemName(pull.itemName, bannerDetail.banner.game === 'HSR' ? 'HSR' : 'GENSHIN')}
+                            itemType={pull.itemType}
+                            game={bannerDetail.banner.game === 'HSR' ? 'HSR' : 'Genshin'}
+                            className="w-full h-full"
+                          />
+                        </div>
                         <div 
                           className={`w-3 h-3 rounded-full ${
                             pull.rankType === 5 ? 'bg-yellow-400' :
-                            pull.rankType === 4 ? 'bg-purple-400' : 'bg-blue-400'
+                            pull.rankType === 4 ? 'bg-star-purple-light' : 'bg-star-blue'
                           }`}
                         ></div>
                         <div>
-                          <div className="text-white font-medium">{pull.itemName}</div>
-                          <div className="text-gray-400 text-sm">{pull.itemType}</div>
+                          <div className="text-white font-medium">
+                            {translateItemName(pull.itemName, bannerDetail.banner.game === 'HSR' ? 'HSR' : 'GENSHIN')}
+                          </div>
+                          <div className="text-gray-400 text-sm">
+                            {translateItemType(pull.itemType, bannerDetail.banner.game === 'HSR' ? 'HSR' : 'GENSHIN')}
+                          </div>
                         </div>
                       </div>
                       
@@ -399,6 +576,7 @@ const Statistics = () => {
               </div>
             </div>
           )}
+        </div>
         </div>
       )}
     </div>

@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /profile
+Disallow: /upload
+
+# Яндекс бот
+User-agent: Yandex
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /profile
+Disallow: /upload
+Clean-param: token&authtoken&session
+
+# Карта сайта
+Sitemap: https://liht.online/sitemap.xml
+Host: https://liht.online

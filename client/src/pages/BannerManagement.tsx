@@ -1,55 +1,63 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
+import BannerImage from '../components/BannerImage'
+
+interface Banner {
+  id: number
+  bannerId: string
+  bannerName: string
+  bannerType: string
+  game: string
+  imagePath?: string
+  startTime?: string
+  endTime?: string
+  createdAt: string
+}
 
 const BannerManagement = () => {
   const { user } = useAuth()
-  const [banners, setBanners] = useState<any[]>([])
-  const [status, setStatus] = useState<any>(null)
-  const [updating, setUpdating] = useState(false)
+  const [banners, setBanners] = useState<Banner[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedGame, setSelectedGame] = useState<'HSR' | 'GENSHIN'>('HSR')
 
   useEffect(() => {
-    loadBannersData()
-    loadStatus()
-  }, [])
+    loadBanners()
+  }, [selectedGame])
 
-  const loadBannersData = async () => {
+  const loadBanners = async () => {
     try {
-      const response = await axios.get('/api/banners/list')
-      setBanners(response.data.banners || [])
+      setLoading(true)
+      const response = await axios.get(`/api/banners/game/${selectedGame}`)
+      setBanners(response.data)
     } catch (error) {
       console.error('Error loading banners:', error)
-    }
-  }
-
-  const loadStatus = async () => {
-    try {
-      const response = await axios.get('/api/banners/status')
-      setStatus(response.data)
-    } catch (error) {
-      console.error('Error loading status:', error)
-    }
-  }
-
-  const handleUpdateImages = async () => {
-    setUpdating(true)
-    try {
-      await axios.post('/api/banners/update')
-      alert('Изображения баннеров успешно обновлены!')
-      await loadBannersData()
-      await loadStatus()
-    } catch (error: any) {
-      alert(`Ошибка обновления: ${error.response?.data?.error || error.message}`)
     } finally {
-      setUpdating(false)
+      setLoading(false)
     }
+  }
+
+  const getBannerTypeLabel = (type: string) => {
+    const types: { [key: string]: string } = {
+      character: 'Персонаж',
+      weapon: 'Оружие',
+      standard: 'Стандартный',
+      beginner: 'Новичок',
+      chronicled: 'Хроникальный'
+    }
+    return types[type] || type
+  }
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Не указана'
+    return new Date(dateString).toLocaleDateString('ru-RU')
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">🖼️ Управление изображениями баннеров</h1>
-        
+        <h1 className="text-3xl font-bold text-white">🎯 Управление баннерами</h1>
+
         <div className="bg-hsr-gold/20 border border-hsr-gold/30 rounded-lg px-4 py-2">
           <p className="text-hsr-gold text-sm">
             👤 <span className="font-bold">{user?.username}</span>
@@ -57,89 +65,117 @@ const BannerManagement = () => {
         </div>
       </div>
 
-      {/* Status Card */}
-      {status && (
-        <div className="card">
-          <h2 className="text-xl font-bold text-white mb-4">📊 Статус сервиса</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-green-500/20 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-green-400">{status.status}</div>
-              <div className="text-gray-300 text-sm">Статус</div>
-            </div>
-            <div className="bg-blue-500/20 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-400">{status.imageCount}</div>
-              <div className="text-gray-300 text-sm">Изображений</div>
-            </div>
-            <div className="bg-purple-500/20 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-purple-400">{status.totalSize}</div>
-              <div className="text-gray-300 text-sm">Размер</div>
-            </div>
-            <div className="bg-orange-500/20 rounded-lg p-4 text-center">
-              <button
-                onClick={handleUpdateImages}
-                disabled={updating}
-                className="w-full btn-primary text-sm"
-              >
-                {updating ? 'Обновление...' : 'Обновить изображения'}
-              </button>
-            </div>
+      {/* Game Selector */}
+      <div className="card">
+        <div className="flex items-center space-x-4">
+          <label className="text-white font-medium">Игра:</label>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setSelectedGame('HSR')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                selectedGame === 'HSR'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/10 text-gray-300 hover:bg-white/20'
+              }`}
+            >
+              Honkai Star Rail
+            </button>
+            <button
+              onClick={() => setSelectedGame('GENSHIN')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                selectedGame === 'GENSHIN'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/10 text-gray-300 hover:bg-white/20'
+              }`}
+            >
+              Genshin Impact
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Banner Images Grid */}
+      {/* Banners Grid */}
       <div className="card">
-        <h2 className="text-xl font-bold text-white mb-4">🎯 Доступные изображения баннеров</h2>
-        
-        {banners.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {banners.map((banner, index) => (
-              <div key={index} className="bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all">
-                <div className="h-32 bg-gradient-to-r from-hsr-gold/20 to-purple-600/20 relative overflow-hidden">
-                  <img 
-                    src={banner.fullUrl}
-                    alt={banner.bannerName}
-                    className="w-full h-full object-cover"
-                    onError={(e: any) => {
-                      e.target.src = 'https://via.placeholder.com/300x150/1a1a1a/ffffff?text=Banner'
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/30"></div>
+        <h2 className="text-xl font-bold text-white mb-4">
+          🎯 Баннеры {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'}
+        </h2>
+
+        {loading ? (
+          <div className="text-center text-gray-400 py-8">
+            <div className="text-6xl mb-4">⏳</div>
+            <p className="text-lg">Загрузка баннеров...</p>
+          </div>
+        ) : banners.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {banners.map((banner) => (
+              <div key={banner.id} className="bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all">
+                {/* Banner Image */}
+                <div className="h-48 bg-gradient-to-r from-hsr-gold/20 to-purple-600/20 relative overflow-hidden">
+                  {banner.imagePath ? (
+                    <BannerImage
+                      bannerName={banner.bannerName}
+                      imagePath={banner.imagePath}
+                      className="w-full h-full"
+                      aspectRatio="wide"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center text-gray-400">
+                        <div className="text-4xl mb-2">🖼️</div>
+                        <p className="text-sm">Изображение не задано</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/20"></div>
+
+                  {/* Banner Type Badge */}
+                  <div className="absolute top-2 right-2">
+                    <span className="bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      {getBannerTypeLabel(banner.bannerType)}
+                    </span>
+                  </div>
                 </div>
-                
-                <div className="p-3">
-                  <div className="text-white font-medium text-sm mb-1 truncate" title={banner.bannerName}>
+
+                {/* Banner Info */}
+                <div className="p-4">
+                  <h3 className="text-white font-bold text-lg mb-2" title={banner.bannerName}>
                     {banner.bannerName}
+                  </h3>
+
+                  <div className="space-y-1 text-sm text-gray-300">
+                    <p><span className="text-purple-400">ID:</span> {banner.bannerId}</p>
+                    <p><span className="text-purple-400">Тип:</span> {getBannerTypeLabel(banner.bannerType)}</p>
+                    <p><span className="text-purple-400">Игра:</span> {banner.game}</p>
+                    <p><span className="text-purple-400">Создан:</span> {formatDate(banner.createdAt)}</p>
+
+                    {banner.startTime && (
+                      <p><span className="text-cyan-400">Начало:</span> {formatDate(banner.startTime)}</p>
+                    )}
+
+                    {banner.endTime && (
+                      <p><span className="text-red-400">Конец:</span> {formatDate(banner.endTime)}</p>
+                    )}
                   </div>
-                  <div className="text-gray-400 text-xs truncate" title={banner.filename}>
-                    {banner.filename}
-                  </div>
-                  <div className="mt-2">
-                    <a 
-                      href={banner.fullUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-hsr-gold hover:text-yellow-300 text-xs"
-                    >
-                      Открыть в новой вкладке →
-                    </a>
-                  </div>
+
+                  {/* Image Path */}
+                  {banner.imagePath && (
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <p className="text-xs text-gray-400 truncate" title={banner.imagePath}>
+                        📁 {banner.imagePath}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         ) : (
           <div className="text-center text-gray-400 py-8">
-            <div className="text-6xl mb-4">🖼️</div>
-            <p className="text-lg">Изображения баннеров не найдены</p>
-            <p className="text-sm mt-2">Нажмите "Обновить изображения" для загрузки</p>
-            <button
-              onClick={handleUpdateImages}
-              disabled={updating}
-              className="mt-4 btn-primary"
-            >
-              {updating ? 'Загрузка...' : 'Загрузить изображения'}
-            </button>
+            <div className="text-6xl mb-4">🎯</div>
+            <p className="text-lg">Баннеры не найдены</p>
+            <p className="text-sm mt-2">
+              Для игры {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'} баннеры отсутствуют
+            </p>
           </div>
         )}
       </div>
@@ -149,16 +185,16 @@ const BannerManagement = () => {
         <h2 className="text-xl font-bold text-white mb-4">ℹ️ Информация</h2>
         <div className="space-y-3 text-gray-300">
           <p>
-            <strong>Автоматическое обновление:</strong> Изображения баннеров обновляются автоматически каждый день в 3:00.
+            <strong>Управление баннерами:</strong> Здесь отображаются все баннеры из базы данных с их изображениями.
           </p>
           <p>
-            <strong>Источники изображений:</strong> Система загружает изображения из официальных источников HSR.
+            <strong>Пути к изображениям:</strong> Изображения хранятся по путям, указанным в поле imagePath каждого баннера.
           </p>
           <p>
-            <strong>Очистка:</strong> Старые неиспользуемые изображения удаляются автоматически каждую неделю.
+            <strong>Добавление изображений:</strong> Изображения можно добавить через админ-панель в разделе "Баннеры".
           </p>
           <p>
-            <strong>Ручное обновление:</strong> Вы можете принудительно обновить изображения с помощью кнопки выше.
+            <strong>Форматы изображений:</strong> Поддерживаются форматы JPG, PNG, WebP.
           </p>
         </div>
       </div>

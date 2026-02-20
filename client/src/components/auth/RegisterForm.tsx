@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import axios from 'axios'
 
 interface RegisterFormProps {
@@ -29,15 +29,15 @@ const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps)
     setLoading(true)
     setError('')
 
-    // Валидация
+    // Р’Р°Р»РёРґР°С†РёСЏ
     if (formData.password !== formData.confirmPassword) {
-      setError('Пароли не совпадают')
+      setError('РџР°СЂРѕР»Рё РЅРµ СЃРѕРІРїР°РґР°СЋС‚')
       setLoading(false)
       return
     }
 
     if (formData.password.length < 6) {
-      setError('Пароль должен содержать минимум 6 символов')
+      setError('РџР°СЂРѕР»СЊ РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ РјРёРЅРёРјСѓРј 6 СЃРёРјРІРѕР»РѕРІ')
       setLoading(false)
       return
     }
@@ -52,16 +52,16 @@ const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps)
       
       const { user, token } = response.data
       
-      // Сохраняем токен в localStorage
+      // РЎРѕС…СЂР°РЅСЏРµРј С‚РѕРєРµРЅ РІ localStorage
       localStorage.setItem('authToken', token)
       localStorage.setItem('user', JSON.stringify(user))
       
-      // Устанавливаем токен в axios по умолчанию
+      // РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј С‚РѕРєРµРЅ РІ axios РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       
       onRegisterSuccess(user, token)
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Ошибка регистрации')
+      setError(error.response?.data?.message || 'РћС€РёР±РєР° СЂРµРіРёСЃС‚СЂР°С†РёРё')
     } finally {
       setLoading(false)
     }
@@ -69,7 +69,7 @@ const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps)
 
   return (
     <div className="card max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-white mb-6 text-center">📝 Регистрация</h2>
+      <h2 className="text-2xl font-bold text-white mb-6 text-center">Р РµРіРёСЃС‚СЂР°С†РёСЏ</h2>
       
       {error && (
         <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mb-4">
@@ -88,17 +88,17 @@ const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps)
             value={formData.uid}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold"
-            placeholder="Ваш уникальный ID в игре"
+            className="input-glass"
+            placeholder="Р’Р°С€ СѓРЅРёРєР°Р»СЊРЅС‹Р№ ID РІ РёРіСЂРµ"
           />
           <p className="text-gray-400 text-xs mt-1">
-            Найдите ваш UID в настройках игры HSR
+            РќР°Р№РґРёС‚Рµ РІР°С€ UID РІ РЅР°СЃС‚СЂРѕР№РєР°С… РёРіСЂС‹ HSR
           </p>
         </div>
         
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            Имя пользователя *
+            РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ *
           </label>
           <input
             type="text"
@@ -106,28 +106,28 @@ const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps)
             value={formData.username}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold"
-            placeholder="Введите имя пользователя"
+            className="input-glass"
+            placeholder="Р’РІРµРґРёС‚Рµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ"
           />
         </div>
         
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            Email (опционально)
+            Email (РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ)
           </label>
           <input
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold"
+            className="input-glass"
             placeholder="your@email.com"
           />
         </div>
         
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            Пароль *
+            РџР°СЂРѕР»СЊ *
           </label>
           <input
             type="password"
@@ -135,14 +135,14 @@ const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps)
             value={formData.password}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold"
-            placeholder="Минимум 6 символов"
+            className="input-glass"
+            placeholder="РњРёРЅРёРјСѓРј 6 СЃРёРјРІРѕР»РѕРІ"
           />
         </div>
         
         <div>
           <label className="block text-gray-300 text-sm font-medium mb-2">
-            Подтвердите пароль *
+            РџРѕРґС‚РІРµСЂРґРёС‚Рµ РїР°СЂРѕР»СЊ *
           </label>
           <input
             type="password"
@@ -150,8 +150,8 @@ const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps)
             value={formData.confirmPassword}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold"
-            placeholder="Повторите пароль"
+            className="input-glass"
+            placeholder="РџРѕРІС‚РѕСЂРёС‚Рµ РїР°СЂРѕР»СЊ"
           />
         </div>
         
@@ -163,22 +163,22 @@ const RegisterForm = ({ onRegisterSuccess, onSwitchToLogin }: RegisterFormProps)
           {loading ? (
             <div className="flex items-center justify-center">
               <div className="animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"></div>
-              Регистрация...
+              Р РµРіРёСЃС‚СЂР°С†РёСЏ...
             </div>
           ) : (
-            'Зарегистрироваться'
+            'Р—Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°С‚СЊСЃСЏ'
           )}
         </button>
       </form>
       
       <div className="mt-6 text-center">
         <p className="text-gray-400">
-          Уже есть аккаунт?{' '}
+          РЈР¶Рµ РµСЃС‚СЊ Р°РєРєР°СѓРЅС‚?{' '}
           <button
             onClick={onSwitchToLogin}
-            className="text-hsr-gold hover:underline"
+            className="text-accent-cyan hover:text-cyan-300 transition-colors"
           >
-            Войти
+            Р’РѕР№С‚Рё
           </button>
         </p>
       </div>

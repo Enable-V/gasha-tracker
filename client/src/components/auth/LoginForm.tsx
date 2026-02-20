@@ -47,7 +47,7 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister }: LoginFormProps) => {
 
   return (
     <div className="card max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-white mb-6 text-center">🔐 Вход в систему</h2>
+      <h2 className="text-2xl font-bold text-white mb-6 text-center">Вход в систему</h2>
       
       {error && (
         <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mb-4">
@@ -66,7 +66,7 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister }: LoginFormProps) => {
             value={formData.uid}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold"
+            className="input-glass"
             placeholder="Введите ваш UID"
           />
         </div>
@@ -81,7 +81,7 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister }: LoginFormProps) => {
             value={formData.password}
             onChange={handleChange}
             required
-            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-hsr-gold"
+            className="input-glass"
             placeholder="Введите пароль"
           />
         </div>
@@ -107,7 +107,7 @@ const LoginForm = ({ onLoginSuccess, onSwitchToRegister }: LoginFormProps) => {
           Нет аккаунта?{' '}
           <button
             onClick={onSwitchToRegister}
-            className="text-hsr-gold hover:underline"
+            className="text-accent-cyan hover:text-cyan-300 transition-colors"
           >
             Зарегистрироваться
           </button>
