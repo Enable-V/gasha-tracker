@@ -24,3 +24,26 @@ Thumbs.db
 # Cache
 .cache
 .parcel-cache
+
+# Private repo files (never include in public)
+server/
+database/
+docker-compose*.yml
+ecosystem.config.*
+*.sql
+*.ps1
+!scripts/*.ps1
+push-private.ps1
+push-public.ps1
+REPO_WORKFLOW*.md
+DEPLOYMENT*.md
+public-readme.md
+start.bat
+start-*.sh
+check_cache_stats.ps1
+paimon-moe-local-data.json
+pom-moe-export-*.json
+docx.md
+public.code-workspace
+package-lock.json
+.github/
