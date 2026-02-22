@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { signInWithPopup } from 'firebase/auth'
+import { auth as firebaseAuth, googleProvider } from '../firebaseConfig'
 
 interface User {
   id: number
@@ -15,6 +17,7 @@ interface AuthContextType {
   token: string | null
   loading: boolean
   login: (username: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<void>
   register: (username: string, email: string, password: string) => Promise<void>
   logout: () => void
   isAuthenticated: boolean
@@ -72,6 +75,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(firebaseAuth, googleProvider)
+      const idToken = await result.user.getIdToken()
+
+      const response = await axios.post('/api/auth/google', { idToken })
+      const { user: userData, token: authToken } = response.data
+
+      setUser(userData)
+      setToken(authToken)
+      localStorage.setItem('token', authToken)
+      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`
+      
+      navigate('/')
+    } catch (error) {
+      throw error
+    }
+  }
+
   const register = async (username: string, email: string, password: string) => {
     try {
       const response = await axios.post('/api/auth/register', {
@@ -105,6 +127,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     loading,
     login,
+    loginWithGoogle,
     register,
     logout,
     isAuthenticated: !!user

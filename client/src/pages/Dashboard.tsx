@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import BannerImage from '../components/BannerImage'
 import CharacterImage from '../components/CharacterImage'
 
 type GameType = 'HSR' | 'GENSHIN'
@@ -97,10 +96,19 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'characters' | 'equipment'>('overview')
   const [itemMappings, setItemMappings] = useState<{ [key: string]: string }>({})
   const [banners, setBanners] = useState<any[]>([])
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error'; visible: boolean } | null>(null)
 
-  // Функция для получения русского названия предмета
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type, visible: true })
+    setTimeout(() => setToast(prev => prev ? { ...prev, visible: false } : null), 3000)
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  // Нормализация имени для поиска (совпадает с серверной normalizeItemName)
+  const normalizeName = (name: string) => name.toLowerCase().replace(/[-_]+/g, ' ').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
+
   const translateItemName = (englishName: string, game: GameType): string => {
-    const key = `${englishName.toLowerCase()}_${game}`
+    const key = `${normalizeName(englishName)}_${game}`
     return itemMappings[key] || englishName
   }
 
@@ -115,7 +123,7 @@ const Dashboard = () => {
       // Создаем карту для быстрого поиска: "englishname_game" -> "russianName"
       const mappings: { [key: string]: string } = {}
       response.data.forEach((mapping: ItemNameMapping) => {
-        const key = `${mapping.englishName.toLowerCase()}_${mapping.game}`
+        const key = `${normalizeName(mapping.englishName)}_${mapping.game}`
         mappings[key] = mapping.russianName
       })
       
@@ -238,10 +246,10 @@ const Dashboard = () => {
       // Перезагружаем данные после пересчета
       await loadUserData()
       
-      alert(`Статистика pity успешно пересчитана! Обновлено ${response.data.bannersUpdated} баннеров.`)
+      showToast(`Pity пересчитан! Баннеров: ${response.data.bannersUpdated}, круток обновлено: ${response.data.pullsUpdated}`, 'success')
     } catch (error) {
       console.error('Error recalculating pity:', error)
-      alert('Ошибка при пересчете статистики pity. Попробуйте еще раз.')
+      showToast('Ошибка при пересчете статистики pity. Попробуйте ещё раз.', 'error')
     } finally {
       setLoading(false)
     }
@@ -272,8 +280,9 @@ const Dashboard = () => {
     characters.forEach((char: any) => {
       const name = translateItemName(char.itemName, selectedGame)
       const originalName = char.itemName
-      if (!characterCounts[originalName]) {
-        characterCounts[originalName] = {
+      const groupKey = normalizeName(originalName)
+      if (!characterCounts[groupKey]) {
+        characterCounts[groupKey] = {
           name, // Переведенное имя для отображения
           originalName, // Оригинальное английское имя для поиска изображений
           count: 0,
@@ -282,9 +291,9 @@ const Dashboard = () => {
           itemType: char.itemType
         }
       }
-      characterCounts[originalName].count++
-      if (new Date(char.time) > new Date(characterCounts[originalName].latestPull)) {
-        characterCounts[originalName].latestPull = char.time
+      characterCounts[groupKey].count++
+      if (new Date(char.time) > new Date(characterCounts[groupKey].latestPull)) {
+        characterCounts[groupKey].latestPull = char.time
       }
     })
     
@@ -309,8 +318,9 @@ const Dashboard = () => {
     equipment.forEach((item: any) => {
       const name = translateItemName(item.itemName, selectedGame)
       const originalName = item.itemName
-      if (!equipmentCounts[originalName]) {
-        equipmentCounts[originalName] = {
+      const groupKey = normalizeName(originalName)
+      if (!equipmentCounts[groupKey]) {
+        equipmentCounts[groupKey] = {
           name, // Переведенное имя для отображения
           originalName, // Оригинальное английское имя для поиска изображений
           count: 0,
@@ -319,9 +329,9 @@ const Dashboard = () => {
           itemType: item.itemType
         }
       }
-      equipmentCounts[originalName].count++
-      if (new Date(item.time) > new Date(equipmentCounts[originalName].latestPull)) {
-        equipmentCounts[originalName].latestPull = item.time
+      equipmentCounts[groupKey].count++
+      if (new Date(item.time) > new Date(equipmentCounts[groupKey].latestPull)) {
+        equipmentCounts[groupKey].latestPull = item.time
       }
     })
     
@@ -333,29 +343,7 @@ const Dashboard = () => {
     }
   }
 
-  const getBannerStats = () => {
-    if (!gachaData?.pulls) return {}
-    
-    const bannerCounts: any = {}
-    gachaData.pulls.forEach((pull: any) => {
-      // Ищем баннер в загруженных данных из базы данных
-      const bannerData = banners.find(b => b.bannerId === pull.bannerId)
-      const bannerName = bannerData ? (bannerData.bannerNameRu || bannerData.bannerName) : (pull.banner?.bannerNameRu || pull.banner?.bannerName || 'Unknown')
-      const bannerId = pull.bannerId || pull.banner?.bannerId || 'unknown'
-      const imagePath = bannerData ? bannerData.imagePath : null
-      
-      if (!bannerCounts[bannerName]) {
-        bannerCounts[bannerName] = {
-          count: 0,
-          bannerId: bannerId,
-          imagePath: imagePath
-        }
-      }
-      bannerCounts[bannerName].count += 1
-    })
-    
-    return bannerCounts
-  }
+
 
   // Функция для получения изображения предмета (пока не используется)
   // const getItemImage = (itemName: string, itemType: string) => {
@@ -372,67 +360,11 @@ const Dashboard = () => {
   //   return '/images/placeholder.svg'
   // }
 
-  // Компонент для отображения баннера с изображением
-  const BannerCard = ({ banner, count, percentage, bannerId, imagePath }: { 
-    banner: string, 
-    count: number, 
-    percentage: string, 
-    bannerId: string,
-    imagePath?: string
-  }) => {
-    const handleBannerClick = () => {
-      navigate(`/banner/${selectedGame.toLowerCase()}/${bannerId}`)
-    }
 
-    return (
-      <div 
-        className="bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all hover:scale-105 cursor-pointer group"
-        onClick={handleBannerClick}
-      >
-        {/* Изображение баннера */}
-          <div className="h-32 bg-gradient-to-r from-accent-cyan/10 to-star-purple/10 relative overflow-hidden">
-          <BannerImage
-            bannerName={banner}
-            imagePath={imagePath}
-            className="w-full h-full"
-            aspectRatio="wide"
-          />
-          <div className="absolute inset-0 bg-black/50"></div>
-          <div className="absolute bottom-2 left-2 right-2">
-            <div className="text-lg font-bold text-accent-cyan">{count}</div>
-            <div className="text-gray-200 text-sm truncate">{banner}</div>
-          </div>
-          {/* Иконка для клика */}
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="bg-black/50 rounded-full p-2">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </div>
-        </div>
-        
-        {/* Статистика */}
-        <div className="p-3">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 text-xs">Процент от общего</span>
-            <span className="text-accent-cyan text-sm font-bold">{percentage}</span>
-          </div>
-          <div className="text-center mt-2">
-            <span className="text-xs text-purple-300 hover:text-purple-100 transition-colors">
-              Нажмите для просмотра →
-            </span>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   const rarityStats = getRarityStats()
   const characterStats = getCharacterStats()
   const equipmentStats = getEquipmentStats()
-  const bannerStats = getBannerStats()
-
   const TabButton = ({ tab, label, icon }: { tab: string, label: string, icon: React.ReactNode }) => (
     <button
       onClick={() => setActiveTab(tab as any)}
@@ -588,65 +520,69 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Блок гарантии по баннерам */}
+              {/* Объединённый блок: баннеры с круткам и pity */}
               {(() => {
-                // Фильтруем баннеры по выбранной игре
                 const filteredBanners = bannerStatsData.filter(banner => banner.game === selectedGame)
                 return filteredBanners && filteredBanners.length > 0
               })() && (
                 <div className="card">
                   <h2 className="text-xl font-bold text-white mb-4">
-                    Круток до гаранта — {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'}
+                    Баннеры — {selectedGame === 'HSR' ? 'Honkai Star Rail' : 'Genshin Impact'}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {bannerStatsData
                       .filter(banner => banner.game === selectedGame)
                       .map((banner) => (
-                      <div key={banner.bannerId} className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-all">
+                      <div 
+                        key={banner.bannerId} 
+                        className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 hover:border-accent-cyan/30 transition-all duration-300 cursor-pointer group"
+                        onClick={() => navigate(`/banner/${selectedGame.toLowerCase()}/${banner.bannerId}`)}
+                      >
+                        {/* Заголовок */}
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-white font-medium text-sm truncate pr-2">
+                          <h4 className="text-white font-semibold text-sm truncate pr-2">
                             {banner.bannerName}
                           </h4>
-                          <span className={`text-xs px-2 py-1 rounded-lg ${
-                            banner.game === 'HSR' 
-                              ? 'bg-accent-cyan/15 text-accent-cyan border border-accent-cyan/20' 
-                              : 'bg-star-purple/15 text-star-purple-light border border-star-purple/20'
-                          }`}>
-                            {banner.game}
-                          </span>
+                          <svg className="w-4 h-4 text-gray-500 group-hover:text-accent-cyan transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </div>
                         
-                        <div className="space-y-3">
-                          <div className="text-center">
-                            <div className={`text-3xl font-bold mb-1 ${
+                        {/* Статистика круток */}
+                        <div className="flex items-baseline gap-2 mb-3">
+                          <span className="text-2xl font-bold text-accent-cyan">{banner.count}</span>
+                          <span className="text-gray-400 text-sm">круток</span>
+                          {rarityStats.total > 0 && (
+                            <span className="text-gray-500 text-sm ml-auto">
+                              {((banner.count / rarityStats.total) * 100).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Pity прогресс */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-400">Pity: <span className="text-white font-medium">{banner.currentPity}</span></span>
+                            <span className={`font-medium ${
                               banner.pullsToGuarantee <= 10 ? 'text-red-400' : 
-                              banner.pullsToGuarantee <= 30 ? 'text-amber-400' : 'text-blue-400'
+                              banner.pullsToGuarantee <= 30 ? 'text-amber-400' : 'text-gray-400'
                             }`}>
-                              {banner.pullsToGuarantee}
-                            </div>
-                            <div className="text-gray-300 text-sm">круток до гаранта</div>
+                              до гаранта: {banner.pullsToGuarantee}
+                            </span>
                           </div>
                           
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-400 text-xs">Текущий pity:</span>
-                              <span className="text-white font-medium">{banner.currentPity}</span>
-                            </div>
-                            
-                            {/* Прогресс бар */}
-                            <div className="w-full bg-white/10 rounded-full h-2">
-                              <div 
-                                className={`h-2 rounded-full transition-all ${
-                                  banner.pullsToGuarantee <= 10 ? 'bg-red-500' : 
-                                  banner.pullsToGuarantee <= 30 ? 'bg-amber-500' : 'bg-cyan-500'
-                                }`}
-                                style={{ width: `${(banner.currentPity / (banner.pityLimit || 90)) * 100}%` }}
-                              ></div>
-                            </div>
-                            
-                            <div className="text-xs text-gray-400 text-center">
-                              {banner.currentPity}/{banner.pityLimit || 90} до гарантированного 5★
-                            </div>
+                          <div className="w-full bg-white/10 rounded-full h-1.5">
+                            <div 
+                              className={`h-1.5 rounded-full transition-all ${
+                                banner.pullsToGuarantee <= 10 ? 'bg-red-500' : 
+                                banner.pullsToGuarantee <= 30 ? 'bg-amber-500' : 'bg-cyan-500'
+                              }`}
+                              style={{ width: `${Math.min((banner.currentPity / (banner.pityLimit || 90)) * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                          
+                          <div className="text-[11px] text-gray-500 text-center">
+                            {banner.currentPity}/{banner.pityLimit || 90}
                           </div>
                         </div>
                       </div>
@@ -655,28 +591,15 @@ const Dashboard = () => {
                 </div>
               )}
 
-              
-              <div className="card">
-                <h2 className="text-xl font-bold text-white mb-4">Распределение по баннерам</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(bannerStats).map(([banner, data]: [string, any]) => (
-                    <BannerCard 
-                      key={banner}
-                      banner={banner}
-                      count={data.count}
-                      percentage={rarityStats.total > 0 ? `${((data.count / rarityStats.total) * 100).toFixed(1)}%` : '0%'}
-                      bannerId={data.bannerId}
-                      imagePath={data.imagePath}
-                    />
-                  ))}
-                </div>
-                {Object.keys(bannerStats).length === 0 && (
+              {bannerStatsData.filter(b => b.game === selectedGame).length === 0 && (
+                <div className="card">
+                  <h2 className="text-xl font-bold text-white mb-4">Баннеры</h2>
                   <div className="text-center text-gray-400 py-8">
                     <svg className="w-10 h-10 mx-auto mb-3 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                     <p>Нет данных о баннерах</p>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {stats?.recentFiveStars?.length > 0 && (
                 <div className="card">
@@ -693,7 +616,7 @@ const Dashboard = () => {
                                 itemName={pull.itemName}
                                 itemType={pull.itemType}
                                 game={selectedGame === 'GENSHIN' ? 'Genshin' : selectedGame}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
                               />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -717,7 +640,7 @@ const Dashboard = () => {
                                 itemName={pull.itemName}
                                 itemType={pull.itemType}
                                 game={selectedGame === 'GENSHIN' ? 'Genshin' : selectedGame}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
                               />
                             </div>
                             <div className="min-w-0 flex-1">
@@ -861,6 +784,37 @@ const Dashboard = () => {
             <p className="text-sm mt-2">
               Импортируйте историю круток через страницу "Загрузка данных" → {selectedGame === 'HSR' ? 'HSR' : 'Genshin Impact'}
             </p>
+          </div>
+        </div>
+      )}
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 transition-all duration-500 ease-out ${
+          toast.visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
+        }`}>
+          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border backdrop-blur-xl ${
+            toast.type === 'success'
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+              : 'bg-red-500/15 border-red-500/30 text-red-300'
+          }`}>
+            {toast.type === 'success' ? (
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <span className="text-sm font-medium">{toast.message}</span>
+            <button
+              onClick={() => setToast(prev => prev ? { ...prev, visible: false } : null)}
+              className="ml-2 p-0.5 rounded-md hover:bg-white/10 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
       )}

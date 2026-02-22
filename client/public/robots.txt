@@ -15,5 +15,5 @@ Disallow: /upload
 Clean-param: token&authtoken&session
 
 # Карта сайта
-Sitemap: https://liht.online/sitemap.xml
-Host: https://liht.online
+Sitemap: https://gacha-tracker.ru/sitemap.xml
+Host: https://gacha-tracker.ru

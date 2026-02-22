@@ -32,11 +32,11 @@ const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
 
   // Обновляем src при изменении пропса
   React.useEffect(() => {
-    if (src && src !== imgSrc && !hasError) {
+    if (src && src !== imgSrc) {
       setImgSrc(src)
       setHasError(false)
     }
-  }, [src])
+  }, [src, imgSrc])
 
   return (
     <img

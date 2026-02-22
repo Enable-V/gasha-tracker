@@ -1,31 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://liht.online/</loc>
+    <loc>https://gacha-tracker.ru/</loc>
     <lastmod>2026-02-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://liht.online/login</loc>
+    <loc>https://gacha-tracker.ru/login</loc>
     <lastmod>2026-02-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://liht.online/register</loc>
+    <loc>https://gacha-tracker.ru/register</loc>
     <lastmod>2026-02-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://liht.online/dashboard</loc>
+    <loc>https://gacha-tracker.ru/dashboard</loc>
     <lastmod>2026-02-20</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://liht.online/statistics</loc>
+    <loc>https://gacha-tracker.ru/statistics</loc>
     <lastmod>2026-02-20</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>

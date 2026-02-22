@@ -35,8 +35,8 @@ const noImageCache = new Set<string>()
 const noImageTTL = new Map<string, number>() // Время жизни для noImageCache
 const NO_IMAGE_CACHE_DURATION = 30 * 60 * 1000 // 30 минут
 
-// Кеш для загружаемых изображений
-const loadingCache = new Set<string>()
+// Дедупликация промисов загрузки маппингов (один fetch на игру)
+const pendingGameLoads = new Map<string, Promise<GameMappings>>()
 
 // Трекер попыток перезагрузки (чтобы не зациклиться)
 const retryAttempts = new Map<string, number>()
@@ -46,13 +46,13 @@ if (typeof window !== 'undefined') {
   (window as any).debugImageCache = {
     getMappingsCache: () => Object.fromEntries(globalMappingsCache),
     getNoImageCache: () => Array.from(noImageCache),
-    getLoadingCache: () => Array.from(loadingCache),
+    getPendingLoads: () => Array.from(pendingGameLoads.keys()),
     clearCache: () => {
       globalMappingsCache.clear()
       cacheTTL.clear()
       noImageCache.clear()
       noImageTTL.clear()
-      loadingCache.clear()
+      pendingGameLoads.clear()
       retryAttempts.clear()
       localStorage.removeItem('hsr_image_mappings')
       localStorage.removeItem('genshin_image_mappings')
@@ -60,7 +60,7 @@ if (typeof window !== 'undefined') {
     stats: () => ({
       mappingsCacheSize: globalMappingsCache.size,
       noImageCacheSize: noImageCache.size,
-      loadingCacheSize: loadingCache.size,
+      pendingLoadsSize: pendingGameLoads.size,
       cacheHits: localStorage.getItem('image_cache_hits') || '0',
       cacheMisses: localStorage.getItem('image_cache_misses') || '0'
     })
@@ -78,7 +78,7 @@ const invalidateGameMappingsCache = (game: string) => {
   localStorage.removeItem(versionKey)
 }
 
-// ФУНКЦИЯ ЗАГРУЗКИ ВСЕХ МАППИНГОВ ДЛЯ ИГРЫ (ОДИН ЗАПРОС)
+// ФУНКЦИЯ ЗАГРУЗКИ ВСЕХ МАППИНГОВ ДЛЯ ИГРЫ (С ДЕДУПЛИКАЦИЕЙ ПРОМИСОВ)
 const loadGameMappings = async (game: string, force: boolean = false): Promise<GameMappings> => {
   const cacheKey = game.toLowerCase()
   const now = Date.now()
@@ -86,6 +86,7 @@ const loadGameMappings = async (game: string, force: boolean = false): Promise<G
   // При force — сбрасываем кеш
   if (force) {
     invalidateGameMappingsCache(game)
+    pendingGameLoads.delete(cacheKey)
   }
 
   // Проверяем актуальность кеша
@@ -95,6 +96,27 @@ const loadGameMappings = async (game: string, force: boolean = false): Promise<G
     localStorage.setItem('image_cache_hits', hits.toString())
     return globalMappingsCache.get(cacheKey)!
   }
+
+  // ДЕДУПЛИКАЦИЯ: если уже идёт загрузка для этой игры — ждём тот же промис
+  if (!force && pendingGameLoads.has(cacheKey)) {
+    return pendingGameLoads.get(cacheKey)!
+  }
+
+  // Создаём и сохраняем промис загрузки
+  const loadPromise = doLoadGameMappings(game, force)
+  pendingGameLoads.set(cacheKey, loadPromise)
+
+  try {
+    return await loadPromise
+  } finally {
+    pendingGameLoads.delete(cacheKey)
+  }
+}
+
+// Фактическая загрузка маппингов (вызывается только один раз на игру)
+const doLoadGameMappings = async (game: string, force: boolean): Promise<GameMappings> => {
+  const cacheKey = game.toLowerCase()
+  const now = Date.now()
 
   // Пытаемся загрузить из localStorage если основной кеш устарел
   const localStorageKey = `${game.toLowerCase()}_image_mappings`
@@ -184,6 +206,10 @@ const hasImagePath = (itemName: string, game: string): string | null => {
     return /[а-яё]/i.test(name)
   }
 
+  // Нормализация имени для поиска в маппингах (совпадает с серверной normalizeItemName)
+  const normalizeName = (name: string): string =>
+    name.toLowerCase().replace(/[-_]+/g, ' ').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
+
   // Функция поиска маппинга с фаллбеком
   const findMapping = (name: string) => {
     // Сначала ищем по точному совпадению
@@ -192,10 +218,10 @@ const hasImagePath = (itemName: string, game: string): string | null => {
       return mapping
     }
 
-    // Если не найдено, пробуем поиск без учета регистра
-    const lowerName = name.toLowerCase()
+    // Если не найдено, пробуем нормализованный поиск (убираем апострофы, дефисы и т.д.)
+    const normalizedName = normalizeName(name)
     for (const [key, value] of Object.entries(mappings)) {
-      if (key.toLowerCase() === lowerName && value.imagePath) {
+      if (normalizeName(key) === normalizedName && value.imagePath) {
         return value
       }
     }
@@ -247,9 +273,8 @@ const CharacterImage: React.FC<CharacterImageProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [hasError, setHasError] = useState(false)
 
-  // Мемоизируем ключи для оптимизации
+  // Мемоизируем ключ для оптимизации
   const cacheKey = useMemo(() => `${game}:${itemName}`, [game, itemName])
-  const loadingKey = useMemo(() => `${game}:${itemName}`, [game, itemName])
 
   // 🚀 ОПТИМИЗИРОВАННАЯ ЗАГРУЗКА ИЗОБРАЖЕНИЯ
   const loadImage = useCallback(async () => {
@@ -258,11 +283,11 @@ const CharacterImage: React.FC<CharacterImageProps> = ({
       return
     }
 
-    // ПЕРВЫЙ ЭТАП: Быстрая проверка кеша
+    // ПЕРВЫЙ ЭТАП: Быстрая проверка кеша (синхронно)
     const cachedPath = hasImagePath(itemName, game)
 
     if (cachedPath) {
-      // Есть изображение в кеше
+      // Есть изображение в кеше — устанавливаем сразу
       setImageSrc(cachedPath)
       setHasError(false)
       return
@@ -278,14 +303,8 @@ const CharacterImage: React.FC<CharacterImageProps> = ({
       return
     }
 
-    // Проверяем, не загружается ли уже это изображение
-    if (loadingCache.has(loadingKey)) {
-      return
-    }
-
-    // ВТОРОЙ ЭТАП: Загрузка маппингов если нужно
+    // ВТОРОЙ ЭТАП: Загрузка маппингов (с дедупликацией — один fetch на игру)
     setIsLoading(true)
-    loadingCache.add(loadingKey)
 
     try {
       const mappings = await loadGameMappings(game)
@@ -293,9 +312,10 @@ const CharacterImage: React.FC<CharacterImageProps> = ({
       // Ищем маппинг: сначала точное совпадение, потом без учёта регистра
       let mapping = mappings[itemName]
       if (!mapping?.imagePath) {
-        const lowerName = itemName.toLowerCase()
+        const normalizedName = itemName.toLowerCase().replace(/[-_]+/g, ' ').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
         for (const [key, value] of Object.entries(mappings)) {
-          if (key.toLowerCase() === lowerName && value.imagePath) {
+          const normalizedKey = key.toLowerCase().replace(/[-_]+/g, ' ').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
+          if (normalizedKey === normalizedName && value.imagePath) {
             mapping = value
             break
           }
@@ -322,9 +342,8 @@ const CharacterImage: React.FC<CharacterImageProps> = ({
       setImageSrc(null)
     } finally {
       setIsLoading(false)
-      loadingCache.delete(loadingKey)
     }
-  }, [itemName, game, cacheKey, loadingKey])
+  }, [itemName, game, cacheKey])
 
   useEffect(() => {
     loadImage()
@@ -349,12 +368,13 @@ const CharacterImage: React.FC<CharacterImageProps> = ({
       try {
         const mappings = await loadGameMappings(game, true)
         
-        // Ищем маппинг без учёта регистра
+        // Ищем маппинг с нормализацией (убираем апострофы, спецсимволы)
         let mapping = mappings[itemName]
         if (!mapping?.imagePath) {
-          const lowerName = itemName.toLowerCase()
+          const normalizedName = itemName.toLowerCase().replace(/[-_]+/g, ' ').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
           for (const [key, value] of Object.entries(mappings)) {
-            if (key.toLowerCase() === lowerName && value.imagePath) {
+            const normalizedKey = key.toLowerCase().replace(/[-_]+/g, ' ').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
+            if (normalizedKey === normalizedName && value.imagePath) {
               mapping = value
               break
             }
@@ -406,7 +426,7 @@ const CharacterImage: React.FC<CharacterImageProps> = ({
       <img
         src={fallbackSrc}
         alt={alt || itemName}
-        className={`object-cover rounded transition-opacity duration-200 ${className}`}
+        className={`object-contain rounded transition-opacity duration-200 ${className}`}
         width={width}
         height={height}
         title={`Изображение недоступно: ${itemName}`}
@@ -418,7 +438,7 @@ const CharacterImage: React.FC<CharacterImageProps> = ({
     <img
       src={imageSrc}
       alt={alt || itemName}
-      className={`object-cover rounded transition-opacity duration-200 ${className}`}
+      className={`object-contain rounded transition-opacity duration-200 ${className}`}
       width={width}
       height={height}
       onError={handleImageError}

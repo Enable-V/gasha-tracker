@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 
@@ -6,13 +7,21 @@ type GameType = 'HSR' | 'GENSHIN'
 
 const Upload = () => {
   const { user, isAuthenticated } = useAuth()
-  const [selectedGame, setSelectedGame] = useState<GameType>('HSR')
+  const [searchParams] = useSearchParams()
+  const initialGame = searchParams.get('game')?.toUpperCase() === 'GENSHIN' ? 'GENSHIN' : 'HSR'
+  const [selectedGame, setSelectedGame] = useState<GameType>(initialGame)
   const [selectedMethod, setSelectedMethod] = useState<'url' | 'file'>('url')
   const [isLoading, setIsLoading] = useState(false)
   const [url, setUrl] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
+  const [copyToast, setCopyToast] = useState(false)
+
+  const showCopyToast = () => {
+    setCopyToast(true)
+    setTimeout(() => setCopyToast(false), 2000)
+  }
 
   // Новые состояния для прогресса
   const [progress, setProgress] = useState(0)
@@ -576,12 +585,13 @@ const Upload = () => {
                         ? `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/gasha-tracker/main/scripts/hsr_getlink.ps1'))}"` 
                         : `Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex "&{$((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Enable-V/gasha-tracker/main/scripts/get-genshin-url.ps1'))}"`;
                       navigator.clipboard.writeText(command);
+                      showCopyToast();
                     }}
                     className="text-sm bg-accent-cyan/10 hover:bg-accent-cyan/20 text-accent-cyan px-3 py-1.5 rounded-lg border border-accent-cyan/20 transition-all duration-200"
                   >
                     Копировать команду
                   </button>
-                  <span className="text-gray-400 text-xs">Команда скопируется в буфер обмена</span>
+                  <span className="text-gray-400 text-xs">{copyToast ? '' : 'Команда скопируется в буфер обмена'}</span>
                 </div>
               </div>
             </div>
@@ -644,6 +654,18 @@ const Upload = () => {
           )}
         </div>
       </div>
+
+      {/* Copy toast notification */}
+      {copyToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+          <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-2xl border backdrop-blur-xl bg-emerald-500/15 border-emerald-500/30 text-emerald-300">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium">Команда скопирована!</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

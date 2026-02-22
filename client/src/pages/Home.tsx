@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 
 const Home = () => {
   const [scrollY, setScrollY] = useState(0)
@@ -44,18 +45,18 @@ const Home = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-            <a href="/upload" className="btn-primary w-full sm:w-auto text-center flex items-center justify-center gap-2 px-8 py-3.5 text-base">
+            <Link to="/upload" className="btn-primary w-full sm:w-auto text-center flex items-center justify-center gap-2 px-8 py-3.5 text-base">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
               Начать отслеживание
-            </a>
-            <a href="/dashboard" className="btn-secondary w-full sm:w-auto text-center flex items-center justify-center gap-2 px-8 py-3.5 text-base">
+            </Link>
+            <Link to="/dashboard" className="btn-secondary w-full sm:w-auto text-center flex items-center justify-center gap-2 px-8 py-3.5 text-base">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
               </svg>
               Дашборд
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -100,10 +101,10 @@ const Home = () => {
                 <span>Анализ pity и гарантии</span>
               </li>
             </ul>
-            <a href="/upload" className="inline-flex items-center space-x-2 text-accent-cyan text-sm font-medium group-hover:translate-x-1 transition-transform duration-300">
+            <Link to="/upload?game=hsr" className="inline-flex items-center space-x-2 text-accent-cyan text-sm font-medium group-hover:translate-x-1 transition-transform duration-300">
               <span>Начать импорт</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -144,10 +145,10 @@ const Home = () => {
                 <span>Анализ pity и гарантии</span>
               </li>
             </ul>
-            <a href="/upload" className="inline-flex items-center space-x-2 text-star-purple-light text-sm font-medium group-hover:translate-x-1 transition-transform duration-300">
+            <Link to="/upload?game=genshin" className="inline-flex items-center space-x-2 text-star-purple-light text-sm font-medium group-hover:translate-x-1 transition-transform duration-300">
               <span>Начать импорт</span>
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-            </a>
+            </Link>
           </div>
         </div>
       </section>

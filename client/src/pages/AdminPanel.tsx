@@ -1855,7 +1855,7 @@ const AdminPanel: React.FC = () => {
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(`/images/static/${image.path}`)
-                                alert('Путь скопирован в буфер обмена')
+                                showNotification('success', 'Скопировано!', 'Путь скопирован в буфер обмена')
                               }}
                               className="text-gray-400 hover:text-white p-1 rounded"
                               title="Копировать путь"

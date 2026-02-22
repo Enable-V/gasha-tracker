@@ -77,9 +77,11 @@ const Statistics = () => {
   const [gameFilter, setGameFilter] = useState<string>('all')
   const [itemMappings, setItemMappings] = useState<{ [key: string]: string }>({})
 
-  // Функция для получения русского названия предмета
+  // Нормализация имени для поиска (совпадает с серверной normalizeItemName)
+  const normalizeName = (name: string) => name.toLowerCase().replace(/[-_]+/g, ' ').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
+
   const translateItemName = (englishName: string, game: GameType): string => {
-    const key = `${englishName.toLowerCase()}_${game}`
+    const key = `${normalizeName(englishName)}_${game}`
     return itemMappings[key] || englishName
   }
 
@@ -120,7 +122,7 @@ const Statistics = () => {
       // Создаем карту для быстрого поиска: "englishname_game" -> "russianName"
       const mappings: { [key: string]: string } = {}
       data.forEach((mapping: ItemNameMapping) => {
-        const key = `${mapping.englishName.toLowerCase()}_${mapping.game}`
+        const key = `${normalizeName(mapping.englishName)}_${mapping.game}`
         mappings[key] = mapping.russianName
       })
       
@@ -415,7 +417,7 @@ const Statistics = () => {
               <img 
                 src={`/api/images/banners/${bannerDetail.banner.imagePath}`}
                 alt={bannerDetail.banner.name}
-                className="w-16 h-16 rounded-lg mr-4 object-cover"
+                className="w-16 h-16 rounded-lg mr-4 object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                 }}

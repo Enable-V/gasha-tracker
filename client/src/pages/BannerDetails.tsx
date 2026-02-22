@@ -70,25 +70,26 @@ const BannerDetails: React.FC = () => {
   const { user } = useAuth()
   
   const [pulls, setPulls] = useState<GachaPull[]>([])
-  const [allPulls, setAllPulls] = useState<GachaPull[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [itemMappings, setItemMappings] = useState<{ [key: string]: string }>({})
   const [bannerName, setBannerName] = useState<string>('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
   const [totalPulls, setTotalPulls] = useState(0)
+  const [filteredTotal, setFilteredTotal] = useState(0)
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('')
   const [selectedRarity, setSelectedRarity] = useState<number | null>(null)
-  const [displayMode, setDisplayMode] = useState<'paginated' | 'loadMore'>('paginated')
   const [itemsPerPage, setItemsPerPage] = useState<number>(20)
   const [isItemsPerPageOpen, setIsItemsPerPageOpen] = useState(false)
 
   const gameType = game?.toUpperCase() as GameType
 
-  // Функция для получения русского названия предмета
+  // Нормализация имени для поиска (совпадает с серверной normalizeItemName)
+  const normalizeName = (name: string) => name.toLowerCase().replace(/[-_]+/g, ' ').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
+
   const translateItemName = (englishName: string): string => {
-    const key = `${englishName.toLowerCase()}_${gameType}`
+    const key = `${normalizeName(englishName)}_${gameType}`
     return itemMappings[key] || englishName
   }
 
@@ -102,7 +103,7 @@ const BannerDetails: React.FC = () => {
       
       const mappings: { [key: string]: string } = {}
       response.data.forEach((mapping: ItemNameMapping) => {
-        const key = `${mapping.englishName.toLowerCase()}_${mapping.game}`
+        const key = `${normalizeName(mapping.englishName)}_${mapping.game}`
         mappings[key] = mapping.russianName
       })
       
@@ -112,44 +113,43 @@ const BannerDetails: React.FC = () => {
     }
   }
 
-  // Загрузка ВСЕ данных круток при инициализации
-  const loadAllPulls = async () => {
+  // Загрузка порции данных с сервера
+  const loadPulls = async (page: number, perPage: number, search: string, rarity: number | null) => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      let allLoadedPulls: GachaPull[] = []
-      let page = 1
-      let hasMore = true
+      const offset = (page - 1) * perPage
 
-      while (hasMore) {
-        const offset = (page - 1) * itemsPerPage
-        const response = await axios.get(`/api/gacha/user`, {
-          headers: { Authorization: `Bearer ${token}` },
-          params: {
-            banner: bannerId,
-            game: gameType,
-            limit: itemsPerPage,
-            offset: offset
-          }
-        })
-
-        if (response.data.pulls && response.data.pulls.length > 0) {
-          if (page === 1) {
-            setBannerName(response.data.pulls[0].banner.bannerNameRu || response.data.pulls[0].banner.bannerName)
-            setTotalPulls(response.data.pagination.total)
-          }
-
-          allLoadedPulls = [...allLoadedPulls, ...response.data.pulls]
-          hasMore = response.data.pagination.hasMore
-          page++
-        } else {
-          hasMore = false
-        }
+      const params: any = {
+        banner: bannerId,
+        game: gameType,
+        limit: perPage,
+        offset: offset
       }
 
-      setPulls(allLoadedPulls)
-      setAllPulls(allLoadedPulls)
-      setHasMore(false)
+      if (rarity !== null) {
+        params.rankType = rarity
+      }
+
+      if (search.trim()) {
+        params.search = search.trim()
+      }
+
+      const response = await axios.get(`/api/gacha/user`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params
+      })
+
+      if (response.data.pulls) {
+        if (!bannerName && response.data.pulls.length > 0) {
+          setBannerName(response.data.pulls[0].banner.bannerNameRu || response.data.pulls[0].banner.bannerName)
+        }
+        setPulls(response.data.pulls)
+        setFilteredTotal(response.data.pagination.total)
+      } else {
+        setPulls([])
+        setFilteredTotal(0)
+      }
     } catch (err: any) {
       console.error('Error loading pulls:', err)
       setError('Ошибка загрузки данных круток')
@@ -158,12 +158,51 @@ const BannerDetails: React.FC = () => {
     }
   }
 
+  // Загрузка общего количества (без фильтров) для отображения в заголовке
+  const loadTotalCount = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(`/api/gacha/user`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          banner: bannerId,
+          game: gameType,
+          limit: 1,
+          offset: 0
+        }
+      })
+      if (response.data.pagination) {
+        setTotalPulls(response.data.pagination.total)
+      }
+      if (response.data.pulls && response.data.pulls.length > 0) {
+        setBannerName(response.data.pulls[0].banner.bannerNameRu || response.data.pulls[0].banner.bannerName)
+      }
+    } catch (err) {
+      console.error('Error loading total count:', err)
+    }
+  }
+
   useEffect(() => {
     if (user && bannerId && gameType) {
       loadItemMappings()
-      loadAllPulls()
+      loadTotalCount()
     }
   }, [user, bannerId, gameType])
+
+  // Debounce поиска — ждём 400мс после ввода перед запросом
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Загрузка данных при изменении страницы, фильтров, поиска
+  useEffect(() => {
+    if (user && bannerId && gameType) {
+      loadPulls(currentPage, itemsPerPage, debouncedSearch, selectedRarity)
+    }
+  }, [user, bannerId, gameType, currentPage, itemsPerPage, debouncedSearch, selectedRarity])
 
   // Закрытие кастомного dropdown при клике вне
   useEffect(() => {
@@ -179,25 +218,7 @@ const BannerDetails: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isItemsPerPageOpen])
 
-  // Фильтрация круток по поиску и редкости
-  const filteredPulls = allPulls.filter(pull => {
-    const translatedName = translateItemName(pull.itemName)
-    const matchesSearch = 
-      translatedName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pull.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pull.itemType.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    const matchesRarity = selectedRarity === null || pull.rankType === selectedRarity
-    
-    return matchesSearch && matchesRarity
-  })
-
-  // Пагинация отфильтрованных результатов
-  const displayedPulls = displayMode === 'paginated' 
-    ? filteredPulls.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-    : filteredPulls.slice(0, Math.min(allPulls.length, itemsPerPage * (currentPage)))
-
-  const totalPages = Math.ceil(filteredPulls.length / itemsPerPage)
+  const totalPages = Math.ceil(filteredTotal / itemsPerPage)
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString)
@@ -264,7 +285,7 @@ const BannerDetails: React.FC = () => {
         </div>
 
         {/* Поисковая панель */}
-        <div className="card space-y-4">
+        <div className="card space-y-4 relative z-20">
           {/* Поле поиска */}
           <div>
             <label className="block text-sm text-gray-400 mb-2 flex items-center space-x-1.5">
@@ -283,88 +304,56 @@ const BannerDetails: React.FC = () => {
             />
           </div>
 
-          {/* Фильтр по редкости */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2 flex items-center space-x-1.5">
-              <svg className="w-4 h-4 text-accent-cyan" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-              <span>Фильтр по редкости</span>
-            </label>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => {
-                  setSelectedRarity(null)
-                  setCurrentPage(1)
-                }}
-                className={`px-4 py-2 rounded-lg transition-all duration-200 border ${
-                  selectedRarity === null 
-                    ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30 shadow-glow-cyan/10' 
-                    : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                Все
-              </button>
-              {[5, 4, 3].map(rarity => (
-                <button
-                  key={rarity}
-                  onClick={() => {
-                    setSelectedRarity(rarity)
-                    setCurrentPage(1)
-                  }}
-                  className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-1 border ${
-                    selectedRarity === rarity 
-                      ? getRarityColor(rarity).split(' ')[0] + ' bg-opacity-80 border-current/30'
-                      : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {[...Array(rarity)].map((_, i) => (
-                    <StarIcon key={i} className="w-4 h-4" />
-                  ))}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Режим отображения */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Фильтр по редкости + Элементов на странице — в одну строку */}
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end">
             <div>
               <label className="block text-sm text-gray-400 mb-2 flex items-center space-x-1.5">
-                <svg className="w-4 h-4 text-star-purple-light" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
-                <span>Режим отображения</span>
+                <svg className="w-4 h-4 text-accent-cyan" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span>Фильтр по редкости</span>
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => {
-                    setDisplayMode('paginated')
+                    setSelectedRarity(null)
                     setCurrentPage(1)
                   }}
                   className={`px-4 py-2 rounded-lg transition-all duration-200 border ${
-                    displayMode === 'paginated' 
-                      ? 'bg-star-purple/20 text-star-purple-light border-star-purple/30' 
+                    selectedRarity === null 
+                      ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30 shadow-glow-cyan/10' 
                       : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  По цифрам
+                  Все
                 </button>
-                <button
-                  onClick={() => {
-                    setDisplayMode('loadMore')
-                    setCurrentPage(1)
-                  }}
-                  className={`px-4 py-2 rounded-lg transition-all duration-200 border ${
-                    displayMode === 'loadMore' 
-                      ? 'bg-star-purple/20 text-star-purple-light border-star-purple/30' 
-                      : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  Загрузить еще
-                </button>
+                {[5, 4, 3].map(rarity => {
+                  const starColor = rarity === 5 ? 'text-yellow-400' : rarity === 4 ? 'text-star-purple-light' : 'text-star-blue-light'
+                  const activeBg = rarity === 5 ? 'bg-yellow-400/15 border-yellow-400/30' : rarity === 4 ? 'bg-star-purple/15 border-star-purple/30' : 'bg-star-blue/15 border-star-blue/30'
+                  return (
+                    <button
+                      key={rarity}
+                      onClick={() => {
+                        setSelectedRarity(rarity)
+                        setCurrentPage(1)
+                      }}
+                      className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-1 border ${
+                        selectedRarity === rarity 
+                          ? `${activeBg} ${starColor}`
+                          : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      {[...Array(rarity)].map((_, i) => (
+                        <StarIcon key={i} className={`w-4 h-4 ${selectedRarity === rarity ? starColor : ''}`} />
+                      ))}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            <div>
+            <div className="min-w-[160px]">
               <label className="block text-sm text-gray-400 mb-2 flex items-center space-x-1.5">
                 <svg className="w-4 h-4 text-star-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" /></svg>
-                <span>Элементов на странице</span>
+                <span>На странице</span>
               </label>
               <div className="relative items-per-page-dropdown" style={{ zIndex: 50 }}>
                 <div
@@ -376,7 +365,7 @@ const BannerDetails: React.FC = () => {
                     backdropFilter: 'blur(8px)',
                   }}
                 >
-                  <span>{itemsPerPage === 999999 ? 'Показать все' : itemsPerPage}</span>
+                  <span>{itemsPerPage >= 999999 ? 'Все' : itemsPerPage}</span>
                   <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isItemsPerPageOpen ? 'rotate-180' : ''}`} />
                 </div>
                 {isItemsPerPageOpen && (
@@ -392,7 +381,7 @@ const BannerDetails: React.FC = () => {
                       { value: 20, label: '20' },
                       { value: 50, label: '50' },
                       { value: 100, label: '100' },
-                      { value: 999999, label: 'Показать все' },
+                      { value: 999999, label: 'Все' },
                     ].map((option) => (
                       <div
                         key={option.value}
@@ -418,17 +407,28 @@ const BannerDetails: React.FC = () => {
 
           {/* Информация о результатах */}
           <div className="text-sm text-gray-400">
-            Показано: {displayedPulls.length} из {filteredPulls.length} круток
-            {filteredPulls.length < totalPulls && (
-              <span className="ml-2 text-gray-500">
-                (Всего в базе: {totalPulls})
-              </span>
+            {loading ? (
+              <span className="text-gray-500">Загрузка...</span>
+            ) : (
+              <>
+                Показано: {Math.min(pulls.length, itemsPerPage)} из {filteredTotal} круток
+                {filteredTotal < totalPulls && (
+                  <span className="ml-2 text-gray-500">
+                    (Всего в базе: {totalPulls})
+                  </span>
+                )}
+                {totalPages > 1 && (
+                  <span className="ml-2 text-gray-500">
+                    • Страница {currentPage} из {totalPages}
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {/* Пусто или список */}
-        {filteredPulls.length === 0 ? (
+        {!loading && pulls.length === 0 ? (
           <div className="text-center text-gray-400 py-12">
             <StarOutlineIcon className="w-16 h-16 mx-auto mb-4 text-gray-600" />
             <h3 className="text-xl font-semibold mb-2">Нет результатов</h3>
@@ -436,9 +436,16 @@ const BannerDetails: React.FC = () => {
           </div>
         ) : (
           <>
+            {/* Индикатор загрузки поверх списка */}
+            {loading && pulls.length > 0 && (
+              <div className="flex justify-center py-4">
+                <div className="loading-spinner" />
+              </div>
+            )}
+
             {/* Список круток */}
-            <div className="space-y-3">
-              {displayedPulls.map((pull, index) => {
+            <div className={`space-y-3 transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>
+              {pulls.map((pull, index) => {
                 const rarityColor = getRarityColor(pull.rankType)
                 const translatedName = translateItemName(pull.itemName)
                 
@@ -494,87 +501,86 @@ const BannerDetails: React.FC = () => {
               })}
             </div>
 
-            {/* Пагинация по цифрам */}
-            {displayMode === 'paginated' && totalPages > 1 && (
+            {/* Пагинация */}
+            {totalPages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-8">
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || loading}
                   className="px-3 py-2 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200"
                 >
                   ←
                 </button>
                 
                 <div className="flex gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
-                    // Показываем текущую страницу, соседние, первую и последнюю
-                    const isVisible =
-                      page === currentPage ||
-                      Math.abs(page - currentPage) <= 1 ||
-                      page === 1 ||
-                      page === totalPages
-                    
-                    if (!isVisible && page !== currentPage - 2 && page !== currentPage + 2) {
-                      return null
-                    }
-                    
-                    if (page === currentPage - 2 || page === currentPage + 2) {
-                      return (
-                        <span key={page} className="px-2 py-2 text-gray-500">
-                          ...
-                        </span>
+                  {(() => {
+                    const pages: React.ReactNode[] = []
+                    const maxVisible = 7
+
+                    if (totalPages <= maxVisible) {
+                      for (let p = 1; p <= totalPages; p++) {
+                        pages.push(
+                          <button
+                            key={p}
+                            onClick={() => setCurrentPage(p)}
+                            disabled={loading}
+                            className={`px-3 py-2 rounded-lg transition-all duration-200 border ${
+                              p === currentPage
+                                ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30'
+                                : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        )
+                      }
+                    } else {
+                      // Always show first page
+                      pages.push(
+                        <button key={1} onClick={() => setCurrentPage(1)} disabled={loading}
+                          className={`px-3 py-2 rounded-lg transition-all duration-200 border ${
+                            1 === currentPage ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+                          }`}>1</button>
+                      )
+
+                      if (currentPage > 3) {
+                        pages.push(<span key="dots-start" className="px-2 py-2 text-gray-500">...</span>)
+                      }
+
+                      const start = Math.max(2, currentPage - 1)
+                      const end = Math.min(totalPages - 1, currentPage + 1)
+                      for (let p = start; p <= end; p++) {
+                        pages.push(
+                          <button key={p} onClick={() => setCurrentPage(p)} disabled={loading}
+                            className={`px-3 py-2 rounded-lg transition-all duration-200 border ${
+                              p === currentPage ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+                            }`}>{p}</button>
+                        )
+                      }
+
+                      if (currentPage < totalPages - 2) {
+                        pages.push(<span key="dots-end" className="px-2 py-2 text-gray-500">...</span>)
+                      }
+
+                      // Always show last page
+                      pages.push(
+                        <button key={totalPages} onClick={() => setCurrentPage(totalPages)} disabled={loading}
+                          className={`px-3 py-2 rounded-lg transition-all duration-200 border ${
+                            totalPages === currentPage ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+                          }`}>{totalPages}</button>
                       )
                     }
-                    
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`px-3 py-2 rounded-lg transition-all duration-200 border ${
-                          page === currentPage
-                            ? 'bg-accent-cyan/15 text-accent-cyan border-accent-cyan/30'
-                            : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )
-                  })}
+
+                    return pages
+                  })()}
                 </div>
 
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={currentPage === totalPages || loading}
                   className="px-3 py-2 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200"
                 >
                   →
-                </button>
-              </div>
-            )}
-
-            {/* Кнопка загрузить еще */}
-            {displayMode === 'loadMore' && (
-              <div className="text-center py-6">
-                <button
-                  onClick={() => {
-                    // Увеличиваем currentPage для отображения следующей партии
-                    setCurrentPage(currentPage + 1)
-                  }}
-                  disabled={loading || displayedPulls.length >= filteredPulls.length}
-                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 mx-auto"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Загрузка...</span>
-                    </>
-                  ) : displayedPulls.length >= filteredPulls.length ? (
-                    <span>Все круток загружены</span>
-                  ) : (
-                    <>
-                      <span>Загрузить еще ({Math.min(displayedPulls.length + itemsPerPage, filteredPulls.length)}/{filteredPulls.length})</span>
-                    </>
-                  )}
                 </button>
               </div>
             )}
