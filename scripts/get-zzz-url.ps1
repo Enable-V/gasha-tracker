@@ -1,5 +1,5 @@
-# Zenless Zone Zero Signal Search URL Extractor
-# Скрипт для получения URL истории поиска сигналов из кэша ZZZ
+﻿# Zenless Zone Zero Signal Search URL Extractor
+# ╨б╨║╤А╨╕╨┐╤В ╨┤╨╗╤П ╨┐╨╛╨╗╤Г╤З╨╡╨╜╨╕╤П URL ╨╕╤Б╤В╨╛╤А╨╕╨╕ ╨┐╨╛╨╕╤Б╨║╨░ ╤Б╨╕╨│╨╜╨░╨╗╨╛╨▓ ╨╕╨╖ ╨║╤Н╤И╨░ ZZZ
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -10,7 +10,7 @@ Write-Host "  Zenless Zone Zero - Signal Search URL  " -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Определяем путь к логам ZZZ
+# ╨Ю╨┐╤А╨╡╨┤╨╡╨╗╤П╨╡╨╝ ╨┐╤Г╤В╤М ╨║ ╨╗╨╛╨│╨░╨╝ ZZZ
 $logPaths = @(
     "$env:USERPROFILE\AppData\LocalLow\miHoYo\ZenlessZoneZero\Player.log",
     "$env:USERPROFILE\AppData\LocalLow\Cognosphere\ZenlessZoneZero\Player.log"
@@ -37,19 +37,19 @@ if (-not $logFile) {
     exit 1
 }
 
-# Читаем лог для поиска пути к данным игры
+# ╨з╨╕╤В╨░╨╡╨╝ ╨╗╨╛╨│ ╨┤╨╗╤П ╨┐╨╛╨╕╤Б╨║╨░ ╨┐╤Г╤В╨╕ ╨║ ╨┤╨░╨╜╨╜╤Л╨╝ ╨╕╨│╤А╤Л
 $logContent = Get-Content $logFile -Raw
 
-# Ищем путь к данным ZZZ
+# ╨Ш╤Й╨╡╨╝ ╨┐╤Г╤В╤М ╨║ ╨┤╨░╨╜╨╜╤Л╨╝ ZZZ
 $gameDataPath = $null
 $patterns = @(
-    "([A-Z]:\\\\[^\\n]*?ZenlessZoneZero_Data)"
+    "([A-Z]:[/\\][^\n]*?ZenlessZoneZero_Data)"
 )
 
 foreach ($pattern in $patterns) {
     $match = [regex]::Match($logContent, $pattern)
     if ($match.Success) {
-        $gameDataPath = $match.Groups[1].Value -replace '\\\\', '\'
+        $gameDataPath = $match.Groups[1].Value -replace '/', '\'
         Write-Host "[OK] Game data path: $gameDataPath" -ForegroundColor Green
         break
     }
@@ -62,8 +62,13 @@ if (-not $gameDataPath) {
     exit 1
 }
 
-# Ищем файл кешa webCaches
-$webCachePath = Join-Path (Split-Path $gameDataPath) "webCaches"
+# ╨Ш╤Й╨╡╨╝ ╤Д╨░╨╣╨╗ ╨║╨╡╤Иa webCaches
+# ╨Т ZZZ ╨┐╨░╨┐╨║╨░ webCaches ╨╜╨░╤Е╨╛╨┤╨╕╤В╤Б╤П ╨Т╨Э╨г╨в╨а╨Ш ZenlessZoneZero_Data (╨╜╨╡ ╤А╤П╨┤╨╛╨╝ ╨║╨░╨║ ╨▓ HSR/Genshin)
+$webCachePath = Join-Path $gameDataPath "webCaches"
+if (-not (Test-Path $webCachePath)) {
+    # Fallback: ╨┐╤А╨╛╨▓╨╡╤А╤П╨╡╨╝ ╤А╤П╨┤╨╛╨╝ ╤Б _Data
+    $webCachePath = Join-Path (Split-Path $gameDataPath) "webCaches"
+}
 Write-Host "[INFO] Looking for web cache in: $webCachePath" -ForegroundColor Cyan
 
 if (-not (Test-Path $webCachePath)) {
@@ -73,7 +78,7 @@ if (-not (Test-Path $webCachePath)) {
     exit 1
 }
 
-# Ищем самую свежую папку Cache
+# ╨Ш╤Й╨╡╨╝ ╤Б╨░╨╝╤Г╤О ╤Б╨▓╨╡╨╢╤Г╤О ╨┐╨░╨┐╨║╤Г Cache
 $cacheVersionDirs = Get-ChildItem -Path $webCachePath -Directory | Sort-Object Name -Descending
 $cacheFile = $null
 
@@ -93,11 +98,13 @@ if (-not $cacheFile) {
     exit 1
 }
 
-# Читаем файл caches
+# ╨з╨╕╤В╨░╨╡╨╝ ╤Д╨░╨╣╨╗ caches (╨║╨╛╨┐╨╕╤А╤Г╨╡╨╝ ╨▓╨╛ ╨▓╤А╨╡╨╝╨╡╨╜╨╜╤Л╨╣ ╤Д╨░╨╣╨╗, ╤В.╨║. ╨╛╤А╨╕╨│╨╕╨╜╨░╨╗ ╨╝╨╛╨╢╨╡╤В ╨▒╤Л╤В╤М ╨╖╨░╨▒╨╗╨╛╨║╨╕╤А╨╛╨▓╨░╨╜ ╨╕╨│╤А╨╛╨╣)
 Write-Host "[INFO] Reading cache file..." -ForegroundColor Cyan
-$cacheContent = [System.IO.File]::ReadAllText($cacheFile)
+$tmpFile = "$env:TEMP\zzz_data_2"
+Copy-Item $cacheFile -Destination $tmpFile -Force
+$cacheContent = [System.IO.File]::ReadAllText($tmpFile)
 
-# Ищем URL gacha log
+# ╨Ш╤Й╨╡╨╝ URL gacha log
 $urlPattern = "https://[^\s\0]+(getGachaLog|gacha)[^\s\0]*authkey=[^\s\0]*"
 $foundMatches = [regex]::Matches($cacheContent, $urlPattern)
 
@@ -114,29 +121,29 @@ if ($foundMatches.Count -eq 0) {
     exit 1
 }
 
-# Берем последний (самый свежий) URL
+# ╨С╨╡╤А╨╡╨╝ ╨┐╨╛╤Б╨╗╨╡╨┤╨╜╨╕╨╣ (╤Б╨░╨╝╤Л╨╣ ╤Б╨▓╨╡╨╢╨╕╨╣) URL
 $gachaUrl = $foundMatches[$foundMatches.Count - 1].Value
 
-# Очищаем URL от мусора в конце
+# ╨Ю╤З╨╕╤Й╨░╨╡╨╝ URL ╨╛╤В ╨╝╤Г╤Б╨╛╤А╨░ ╨▓ ╨║╨╛╨╜╤Ж╨╡
 $cleanUrl = $gachaUrl -replace '["\s\0].*$', ''
 
-# Проверяем URL
+# ╨Я╤А╨╛╨▓╨╡╤А╤П╨╡╨╝ URL
 Write-Host ""
 Write-Host "[OK] Gacha URL found!" -ForegroundColor Green
 Write-Host ""
 
-# Тестируем URL
+# ╨в╨╡╤Б╤В╨╕╤А╤Г╨╡╨╝ URL
 Write-Host "[INFO] Testing URL validity..." -ForegroundColor Cyan
 
 try {
-    # Формируем тестовый URL для ZZZ API
+    Add-Type -AssemblyName System.Web
+    
+    # ╨д╨╛╤А╨╝╨╕╤А╤Г╨╡╨╝ ╤В╨╡╤Б╤В╨╛╨▓╤Л╨╣ URL ╨┤╨╗╤П ZZZ API
     $testUri = [System.Uri]$cleanUrl
     $testHost = $testUri.Host
     $testParams = [System.Web.HttpUtility]::ParseQueryString($testUri.Query)
     
-    $testUrl = "https://$testHost/common/gacha_record/api/getGachaLog?authkey_ver=$($testParams['authkey_ver'])&sign_type=$($testParams['sign_type'])&auth_appid=$($testParams['auth_appid'])&authkey=$([System.Uri]::EscapeDataString($testParams['authkey']))&game_biz=$($testParams['game_biz'])&lang=en&gacha_type=2&page=1&size=5"
-    
-    Add-Type -AssemblyName System.Web
+    $testUrl = "https://$testHost/common/gacha_record/api/getGachaLog?authkey_ver=$($testParams['authkey_ver'])&sign_type=$($testParams['sign_type'])&auth_appid=$($testParams['auth_appid'])&authkey=$([System.Uri]::EscapeDataString($testParams['authkey']))&game_biz=$($testParams['game_biz'])&lang=en&gacha_type=2&real_gacha_type=2&end_id=&page=1&size=5&region=$($testParams['region'])"
     $response = Invoke-RestMethod -Uri $testUrl -Method Get -TimeoutSec 10
     
     if ($response.retcode -eq 0) {
@@ -154,7 +161,7 @@ try {
     Write-Host "URL will still be copied - you can try importing it." -ForegroundColor Yellow
 }
 
-# Копируем в буфер обмена
+# ╨Ъ╨╛╨┐╨╕╤А╤Г╨╡╨╝ ╨▓ ╨▒╤Г╤Д╨╡╤А ╨╛╨▒╨╝╨╡╨╜╨░
 $cleanUrl | Set-Clipboard
 
 Write-Host ""
