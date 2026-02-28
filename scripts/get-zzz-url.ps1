@@ -1,174 +1,102 @@
-﻿# Zenless Zone Zero Signal Search URL Extractor
-# ╨б╨║╤А╨╕╨┐╤В ╨┤╨╗╤П ╨┐╨╛╨╗╤Г╤З╨╡╨╜╨╕╤П URL ╨╕╤Б╤В╨╛╤А╨╕╨╕ ╨┐╨╛╨╕╤Б╨║╨░ ╤Б╨╕╨│╨╜╨░╨╗╨╛╨▓ ╨╕╨╖ ╨║╤Н╤И╨░ ZZZ
+Add-Type -AssemblyName System.Web
 
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
+$logLocation = "%userprofile%\AppData\LocalLow\miHoYo\ZenlessZoneZero\Player.log";
+$logLocationAlt = "%userprofile%\AppData\LocalLow\Cognosphere\ZenlessZoneZero\Player.log";
 
-Write-Host ""
-Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  Zenless Zone Zero - Signal Search URL  " -ForegroundColor Cyan
-Write-Host "============================================" -ForegroundColor Cyan
-Write-Host ""
+$apiHost = "public-operation-nap.hoyoverse.com"
 
-# ╨Ю╨┐╤А╨╡╨┤╨╡╨╗╤П╨╡╨╝ ╨┐╤Г╤В╤М ╨║ ╨╗╨╛╨│╨░╨╝ ZZZ
-$logPaths = @(
-    "$env:USERPROFILE\AppData\LocalLow\miHoYo\ZenlessZoneZero\Player.log",
-    "$env:USERPROFILE\AppData\LocalLow\Cognosphere\ZenlessZoneZero\Player.log"
-)
-
-$logFile = $null
-foreach ($path in $logPaths) {
-    if (Test-Path $path) {
-        $logFile = $path
-        Write-Host "[OK] Log file found: $path" -ForegroundColor Green
-        break
-    }
+$tmps = $env:TEMP + '\pm.ps1';
+if ([System.IO.File]::Exists($tmps)) {
+  ri $tmps
 }
 
-if (-not $logFile) {
-    Write-Host "[ERROR] ZZZ log file not found!" -ForegroundColor Red
-    Write-Host "Checked paths:" -ForegroundColor Yellow
-    foreach ($path in $logPaths) {
-        Write-Host "  - $path" -ForegroundColor Yellow
-    }
-    Write-Host ""
-    Write-Host "Make sure Zenless Zone Zero is installed and has been launched at least once." -ForegroundColor Yellow
-    Read-Host "Press Enter to exit"
-    exit 1
+$path = [System.Environment]::ExpandEnvironmentVariables($logLocation);
+if (-Not [System.IO.File]::Exists($path)) {
+    $path = [System.Environment]::ExpandEnvironmentVariables($logLocationAlt);
 }
+if (-Not [System.IO.File]::Exists($path)) {
+    Write-Host "Cannot find the log file! Make sure to open the signal search history first!" -ForegroundColor Red
 
-# ╨з╨╕╤В╨░╨╡╨╝ ╨╗╨╛╨│ ╨┤╨╗╤П ╨┐╨╛╨╕╤Б╨║╨░ ╨┐╤Г╤В╨╕ ╨║ ╨┤╨░╨╜╨╜╤Л╨╝ ╨╕╨│╤А╤Л
-$logContent = Get-Content $logFile -Raw
-
-# ╨Ш╤Й╨╡╨╝ ╨┐╤Г╤В╤М ╨║ ╨┤╨░╨╜╨╜╤Л╨╝ ZZZ
-$gameDataPath = $null
-$patterns = @(
-    "([A-Z]:[/\\][^\n]*?ZenlessZoneZero_Data)"
-)
-
-foreach ($pattern in $patterns) {
-    $match = [regex]::Match($logContent, $pattern)
-    if ($match.Success) {
-        $gameDataPath = $match.Groups[1].Value -replace '/', '\'
-        Write-Host "[OK] Game data path: $gameDataPath" -ForegroundColor Green
-        break
-    }
-}
-
-if (-not $gameDataPath) {
-    Write-Host "[ERROR] Could not find ZZZ game data path in log file!" -ForegroundColor Red
-    Write-Host "Please open ZZZ and visit Signal Search before running this script." -ForegroundColor Yellow
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
-# ╨Ш╤Й╨╡╨╝ ╤Д╨░╨╣╨╗ ╨║╨╡╤Иa webCaches
-# ╨Т ZZZ ╨┐╨░╨┐╨║╨░ webCaches ╨╜╨░╤Е╨╛╨┤╨╕╤В╤Б╤П ╨Т╨Э╨г╨в╨а╨Ш ZenlessZoneZero_Data (╨╜╨╡ ╤А╤П╨┤╨╛╨╝ ╨║╨░╨║ ╨▓ HSR/Genshin)
-$webCachePath = Join-Path $gameDataPath "webCaches"
-if (-not (Test-Path $webCachePath)) {
-    # Fallback: ╨┐╤А╨╛╨▓╨╡╤А╤П╨╡╨╝ ╤А╤П╨┤╨╛╨╝ ╤Б _Data
-    $webCachePath = Join-Path (Split-Path $gameDataPath) "webCaches"
-}
-Write-Host "[INFO] Looking for web cache in: $webCachePath" -ForegroundColor Cyan
-
-if (-not (Test-Path $webCachePath)) {
-    Write-Host "[ERROR] Web cache directory not found!" -ForegroundColor Red
-    Write-Host "Please open ZZZ and visit Signal Search History first." -ForegroundColor Yellow
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
-# ╨Ш╤Й╨╡╨╝ ╤Б╨░╨╝╤Г╤О ╤Б╨▓╨╡╨╢╤Г╤О ╨┐╨░╨┐╨║╤Г Cache
-$cacheVersionDirs = Get-ChildItem -Path $webCachePath -Directory | Sort-Object Name -Descending
-$cacheFile = $null
-
-foreach ($dir in $cacheVersionDirs) {
-    $dataFile = Join-Path $dir.FullName "Cache\Cache_Data\data_2"
-    if (Test-Path $dataFile) {
-        $cacheFile = $dataFile
-        Write-Host "[OK] Cache file found: $dataFile" -ForegroundColor Green
-        break
-    }
-}
-
-if (-not $cacheFile) {
-    Write-Host "[ERROR] Cache data file not found!" -ForegroundColor Red
-    Write-Host "Please open Signal Search History in ZZZ and try again." -ForegroundColor Yellow
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
-# ╨з╨╕╤В╨░╨╡╨╝ ╤Д╨░╨╣╨╗ caches (╨║╨╛╨┐╨╕╤А╤Г╨╡╨╝ ╨▓╨╛ ╨▓╤А╨╡╨╝╨╡╨╜╨╜╤Л╨╣ ╤Д╨░╨╣╨╗, ╤В.╨║. ╨╛╤А╨╕╨│╨╕╨╜╨░╨╗ ╨╝╨╛╨╢╨╡╤В ╨▒╤Л╤В╤М ╨╖╨░╨▒╨╗╨╛╨║╨╕╤А╨╛╨▓╨░╨╜ ╨╕╨│╤А╨╛╨╣)
-Write-Host "[INFO] Reading cache file..." -ForegroundColor Cyan
-$tmpFile = "$env:TEMP\zzz_data_2"
-Copy-Item $cacheFile -Destination $tmpFile -Force
-$cacheContent = [System.IO.File]::ReadAllText($tmpFile)
-
-# ╨Ш╤Й╨╡╨╝ URL gacha log
-$urlPattern = "https://[^\s\0]+(getGachaLog|gacha)[^\s\0]*authkey=[^\s\0]*"
-$foundMatches = [regex]::Matches($cacheContent, $urlPattern)
-
-if ($foundMatches.Count -eq 0) {
-    Write-Host "[ERROR] No gacha URL found in cache!" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Please follow these steps:" -ForegroundColor Yellow
-    Write-Host "1. Open Zenless Zone Zero" -ForegroundColor White
-    Write-Host "2. Go to Signal Search (gacha) page" -ForegroundColor White
-    Write-Host "3. Click on 'History' button" -ForegroundColor White
-    Write-Host "4. Wait for history to load" -ForegroundColor White
-    Write-Host "5. Run this script again" -ForegroundColor White
-    Read-Host "Press Enter to exit"
-    exit 1
-}
-
-# ╨С╨╡╤А╨╡╨╝ ╨┐╨╛╤Б╨╗╨╡╨┤╨╜╨╕╨╣ (╤Б╨░╨╝╤Л╨╣ ╤Б╨▓╨╡╨╢╨╕╨╣) URL
-$gachaUrl = $foundMatches[$foundMatches.Count - 1].Value
-
-# ╨Ю╤З╨╕╤Й╨░╨╡╨╝ URL ╨╛╤В ╨╝╤Г╤Б╨╛╤А╨░ ╨▓ ╨║╨╛╨╜╤Ж╨╡
-$cleanUrl = $gachaUrl -replace '["\s\0].*$', ''
-
-# ╨Я╤А╨╛╨▓╨╡╤А╤П╨╡╨╝ URL
-Write-Host ""
-Write-Host "[OK] Gacha URL found!" -ForegroundColor Green
-Write-Host ""
-
-# ╨в╨╡╤Б╤В╨╕╤А╤Г╨╡╨╝ URL
-Write-Host "[INFO] Testing URL validity..." -ForegroundColor Cyan
-
-try {
-    Add-Type -AssemblyName System.Web
-    
-    # ╨д╨╛╤А╨╝╨╕╤А╤Г╨╡╨╝ ╤В╨╡╤Б╤В╨╛╨▓╤Л╨╣ URL ╨┤╨╗╤П ZZZ API
-    $testUri = [System.Uri]$cleanUrl
-    $testHost = $testUri.Host
-    $testParams = [System.Web.HttpUtility]::ParseQueryString($testUri.Query)
-    
-    $testUrl = "https://$testHost/common/gacha_record/api/getGachaLog?authkey_ver=$($testParams['authkey_ver'])&sign_type=$($testParams['sign_type'])&auth_appid=$($testParams['auth_appid'])&authkey=$([System.Uri]::EscapeDataString($testParams['authkey']))&game_biz=$($testParams['game_biz'])&lang=en&gacha_type=2&real_gacha_type=2&end_id=&page=1&size=5&region=$($testParams['region'])"
-    $response = Invoke-RestMethod -Uri $testUrl -Method Get -TimeoutSec 10
-    
-    if ($response.retcode -eq 0) {
-        Write-Host "[OK] URL is valid! API responded successfully." -ForegroundColor Green
-        $itemCount = ($response.data.list | Measure-Object).Count
-        if ($itemCount -gt 0) {
-            Write-Host "[OK] Found $itemCount recent pulls in Exclusive Channel." -ForegroundColor Green
+    if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+        Write-Host "Do you want to try to run the script as Administrator? Press [ENTER] to continue, or any key to cancel."
+        $keyInput = [Console]::ReadKey($true).Key
+        if ($keyInput -ne "13") {
+            return
         }
-    } else {
-        Write-Host "[WARN] API returned: $($response.message)" -ForegroundColor Yellow
-        Write-Host "The URL may have expired. Try opening Signal Search History again." -ForegroundColor Yellow
+
+        $myinvocation.mycommand.definition > $tmps
+
+        Start-Process powershell -Verb runAs -ArgumentList "-noexit", $tmps
+        break
     }
-} catch {
-    Write-Host "[WARN] Could not verify URL: $($_.Exception.Message)" -ForegroundColor Yellow
-    Write-Host "URL will still be copied - you can try importing it." -ForegroundColor Yellow
+
+    return
 }
 
-# ╨Ъ╨╛╨┐╨╕╤А╤Г╨╡╨╝ ╨▓ ╨▒╤Г╤Д╨╡╤А ╨╛╨▒╨╝╨╡╨╜╨░
-$cleanUrl | Set-Clipboard
+$logs = Get-Content -Path $path
+$m = $logs -match "(?m).:/.+ZenlessZoneZero_Data"
+$m[0] -match "(.:/.+ZenlessZoneZero_Data)" >$null
+
+if ($matches.Length -eq 0) {
+    Write-Host "Cannot find the signal search url! Make sure to open the signal search history first!" -ForegroundColor Red
+    return
+}
+
+$gamedir = $matches[1]
+$webcachePath = Resolve-Path "$gamedir/webCaches"
+$cacheVerPath = Get-Item (Get-ChildItem -Path $webcachePath | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+$cachefile = Resolve-Path "$cacheVerPath/Cache/Cache_Data/data_2"
+$tmpfile = "$env:TEMP/zzz_data_2"
+
+Copy-Item $cachefile -Destination $tmpfile
+
+function testUrl($url) {
+  $ProgressPreference = 'SilentlyContinue'
+  $uri = [System.UriBuilder]::New($url)
+  $uri.Path = "common/gacha_record/api/getGachaLog"
+  $uri.Host = $apiHost
+  $uri.Fragment = ""
+  $params = [System.Web.HttpUtility]::ParseQueryString($uri.Query)
+  $params.Set("lang", "en");
+  $params.Set("gacha_type", 2);
+  $params.Set("real_gacha_type", 2);
+  $params.Set("size", "5");
+  $uri.Query = $params.ToString()
+  $apiUrl = $uri.Uri.AbsoluteUri
+
+  $response = Invoke-WebRequest -Uri $apiUrl -ContentType "application/json" -UseBasicParsing -TimeoutSec 10 | ConvertFrom-Json
+  $testResult = $response.retcode -eq 0
+  return $testResult
+}
+
+$content = Get-Content -Encoding UTF8 -Raw $tmpfile
+$splitted = $content -split "1/0/"
+$found = $splitted -match "getGachaLog"
+$link = $false
+$linkFound = $false
+for ($i = $found.Length - 1; $i -ge 0; $i -= 1) {
+  $t = $found[$i] -match "(https.+?end_id=)"
+  $link = $matches[0]
+  Write-Host "`rChecking Link $i" -NoNewline
+  $testResult = testUrl $link
+  if ($testResult -eq $true) {
+    $linkFound = $true
+    break
+  }
+  Sleep 1
+}
+
+Remove-Item $tmpfile
 
 Write-Host ""
-Write-Host "============================================" -ForegroundColor Green
-Write-Host "  URL copied to clipboard!" -ForegroundColor Green
-Write-Host "============================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "Paste it into the import form on the website." -ForegroundColor White
-Write-Host ""
-Read-Host "Press Enter to exit"
+
+if (-Not $linkFound) {
+  Write-Host "Cannot find the signal search url! Make sure to open the signal search history first!" -ForegroundColor Red
+  return
+}
+
+$wishHistoryUrl = $link
+
+Write-Host $wishHistoryUrl
+Set-Clipboard -Value $wishHistoryUrl
+Write-Host "Link copied to clipboard, paste it back to gacha-tracker.ru" -ForegroundColor Green
