@@ -79,7 +79,7 @@ $found = $splitted -match "webview_gacha"
 $link = $false
 $linkFound = $false
 for ($i = $found.Length - 1; $i -ge 0; $i -= 1) {
-  $t = $found[$i] -match "(https.+?game_biz=)"
+  $t = $found[$i] -match "(https.+?end_id=)"
   $link = $matches[0]
   Write-Host "`rChecking Link $i" -NoNewline
   $testResult = testUrl $link
